@@ -93,8 +93,39 @@ def load_cookie():
     return cookie
 
 
+def resolve_post_id(post_id, cookie):
+    """如果是短 ID（如 R1vno65Lz），自动转换为数字长 ID"""
+    # 纯数字就无需转换
+    if post_id.isdigit():
+        return post_id
+
+    print(f"🔄 检测到短 ID「{post_id}」，正在转换为数字 ID…")
+    url = f"https://m.weibo.cn/api/statuses/show?id={post_id}"
+    req = Request(url)
+    req.add_header("Cookie", cookie)
+    req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+    req.add_header("Referer", f"https://m.weibo.cn/status/{post_id}")
+    req.add_header("X-Requested-With", "XMLHttpRequest")
+
+    try:
+        with urlopen(req, timeout=10, context=_ssl_ctx) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        numeric_id = str(data.get("id", ""))
+        if numeric_id and numeric_id.isdigit():
+            print(f"✅ 转换成功：{post_id} → {numeric_id}")
+            return numeric_id
+    except Exception as e:
+        print(f"⚠️  短 ID 转换失败：{e}")
+
+    print("   将尝试直接使用短 ID…")
+    return post_id
+
+
 def fetch_reposts(post_id, cookie, max_pages=200, verbose=False):
     """抓取指定帖子的所有转发用户"""
+
+    # 先尝试把短 ID 转成数字 ID
+    post_id = resolve_post_id(post_id, cookie)
 
     all_reposts = []
     seen_users = set()
