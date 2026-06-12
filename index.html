@@ -197,6 +197,14 @@
   .callout-info { background: rgba(124,131,245,.1); border: 1px solid rgba(124,131,245,.2); color: #b0b5f8; }
   .callout-warn { background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.2); color: #f5d070; }
   .callout-success { background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.2); color: #6ee0a8; }
+  .cookie-guide { margin-top: 12px; }
+  .cookie-guide-step { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; }
+  .cookie-guide-num { width: 26px; height: 26px; border-radius: 50%; background: var(--winner); color: #000; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .cookie-guide-text { font-size: 13px; line-height: 1.6; color: var(--text); }
+  .cookie-guide-text strong { color: var(--text); }
+  .cookie-guide-text code { background: var(--card2); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+  .cookie-guide-text kbd { background: var(--card2); padding: 1px 6px; border-radius: 4px; font-size: 12px; border: 1px solid var(--border); }
+  .cookie-guide-divider { height: 1px; background: var(--border); margin: 8px 0; }
 
   /* Copy button */
   .copy-btn {
@@ -281,7 +289,7 @@
 
   <!-- Header -->
   <div class="header">
-    <h1>转发抽奖 · <em>公平可验证</em></h1>
+    <h1>微博抽奖工具</h1>
     <p>本地运行 · 密码学随机 · 结果可复验</p>
   </div>
 
@@ -333,20 +341,68 @@
         </div>
 
         <div style="margin-top:20px;">
-          <h3>使用方法（只需两步）</h3>
-          <div class="callout callout-warn" style="font-size:12px;">
-            <strong>第一步：获取 Cookie</strong><br>
-            ① 用 Chrome 打开 <code>m.weibo.cn</code> 并登录微博<br>
-            ② 按 F12 打开开发者工具 → 点顶部「Network」<br>
-            ③ 在微博页面上随便点一下或刷新<br>
-            ④ 左侧点出现的请求 → 右侧找 Request Headers → Cookie<br>
-            ⑤ 双击 Cookie 值全选，Ctrl+C 复制<br><br>
-            <strong>第二步：运行脚本</strong><br>
-            ① 终端运行 <code>python3 fetch_reposts.py 微博ID</code><br>
-            ② 粘贴刚才复制的 Cookie，按回车<br>
-            ③ 脚本自动抓取，生成 <code>reposts_微博ID_names.txt</code><br>
-            ④ 回到这里点上方「导入文件」上传该 TXT<br><br>
-            💡 Cookie 会自动缓存到本地，下次不用再输入
+          <h3>使用方法</h3>
+          <div class="cookie-guide">
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num">1</div>
+              <div class="cookie-guide-text">
+                <strong>打开微博并登录</strong><br>
+                Chrome 访问 <code>m.weibo.cn</code>，确保已登录
+              </div>
+            </div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num">2</div>
+              <div class="cookie-guide-text">
+                <strong>打开开发者工具</strong><br>
+                按 <kbd>F12</kbd>（Mac 按 <kbd>Cmd+Option+I</kbd>），点顶部 <strong>「Network」</strong> 标签
+              </div>
+            </div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num">3</div>
+              <div class="cookie-guide-text">
+                <strong>刷新页面，让请求出现</strong><br>
+                在微博页面上按 <kbd>F5</kbd> 刷新，Network 面板会出现一堆请求
+              </div>
+            </div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num">4</div>
+              <div class="cookie-guide-text">
+                <strong>点左侧任意请求名</strong><br>
+                比如 <code>config</code>、<code>feed</code>、<code>hotflow</code> 随便点一个<br>
+                <span style="color:var(--winner)">⬅ 这是关键一步！不点的话右边详情面板不会出来</span>
+              </div>
+            </div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num">5</div>
+              <div class="cookie-guide-text">
+                <strong>右侧面板 → Headers → 往下滚 → 找 Request Headers</strong><br>
+                确认右侧顶部 <strong>Headers</strong> 标签是被选中的（默认就是），然后往下滚，找到 <strong>「Request Headers」</strong> 小标题，点击它展开
+              </div>
+            </div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num">6</div>
+              <div class="cookie-guide-text">
+                <strong>复制 cookie 值</strong><br>
+                找到 <code>cookie:</code> 那行（值以 <code>SUB=</code> 开头，很长一串），双击值全选，<kbd>Ctrl+C</kbd> / <kbd>Cmd+C</kbd> 复制
+              </div>
+            </div>
+            <div class="cookie-guide-divider"></div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num" style="background:var(--accent)">7</div>
+              <div class="cookie-guide-text">
+                <strong>运行脚本</strong><br>
+                终端运行 <code>python3 fetch_reposts.py 微博ID</code>，粘贴刚才复制的 Cookie，按回车<br>
+                脚本自动抓取，生成 <code>reposts_微博ID_names.txt</code><br>
+                💡 Cookie 会自动缓存到本地，下次不用再输入
+              </div>
+            </div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num" style="background:var(--accent)">8</div>
+              <div class="cookie-guide-text">
+                <strong>导入名单</strong><br>
+                回到这里，点上方「导入文件」上传生成的 TXT 文件
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -932,7 +988,7 @@ function generateStandalonePage() {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>转发抽奖公示</title>
+<title>微博抽奖公示</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; max-width: 680px; margin: 0 auto; padding: 32px 16px; background: #fafafa; color: #333; line-height: 1.7; }
   h1 { font-size: 22px; border-bottom: 2px solid #7c83f5; padding-bottom: 8px; }
@@ -951,7 +1007,7 @@ function generateStandalonePage() {
 </style>
 </head>
 <body>
-<h1>🎲 转发抽奖公示</h1>
+<h1>微博抽奖公示</h1>
 
 <div class="card">
   <h2>基本信息</h2>
