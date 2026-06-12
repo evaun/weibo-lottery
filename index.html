@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>转发抽奖 · 公平可验证</title>
+<title>微博抽奖工具</title>
 <style>
   :root {
     --bg: #0e1019;
@@ -31,7 +31,6 @@
   /* Header */
   .header { text-align: center; padding: 40px 0 32px; }
   .header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-  .header h1 em { font-style: normal; color: var(--accent); }
   .header p { color: var(--text2); font-size: 14px; margin-top: 8px; }
 
   /* Steps indicator */
@@ -87,7 +86,7 @@
   .btn-danger { background: var(--accent2); color: #fff; }
   .btn-sm { padding: 8px 14px; font-size: 12px; }
   .btn-block { width: 100%; }
-  .btn-group { display: flex; gap: 8px; margin-top: 16px; }
+  .btn-group { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
 
   /* Tag / Badge */
   .badge {
@@ -98,9 +97,7 @@
   }
 
   /* Participant list */
-  .participant-stats {
-    display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap;
-  }
+  .participant-stats { display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap; }
   .stat-item { font-size: 13px; color: var(--text2); }
   .stat-item strong { color: var(--text); font-size: 20px; font-weight: 800; }
 
@@ -123,10 +120,7 @@
     background: radial-gradient(ellipse at center, rgba(124,131,245,.06) 0%, transparent 70%);
     pointer-events: none;
   }
-  .draw-names {
-    font-size: 22px; font-weight: 700; min-height: 36px;
-    color: var(--accent);
-  }
+  .draw-names { font-size: 22px; font-weight: 700; min-height: 36px; color: var(--accent); }
   .draw-label { font-size: 13px; color: var(--text2); margin-top: 8px; }
   .draw-counter { font-size: 48px; font-weight: 900; color: var(--accent); margin: 8px 0; }
 
@@ -190,13 +184,12 @@
   .method-panel.active { display: block; }
 
   /* Info callout */
-  .callout {
-    padding: 14px 16px; border-radius: 8px; font-size: 13px;
-    line-height: 1.6; margin-bottom: 16px;
-  }
+  .callout { padding: 14px 16px; border-radius: 8px; font-size: 13px; line-height: 1.6; margin-bottom: 16px; }
   .callout-info { background: rgba(124,131,245,.1); border: 1px solid rgba(124,131,245,.2); color: #b0b5f8; }
   .callout-warn { background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.2); color: #f5d070; }
   .callout-success { background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.2); color: #6ee0a8; }
+
+  /* Cookie guide */
   .cookie-guide { margin-top: 12px; }
   .cookie-guide-step { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; }
   .cookie-guide-num { width: 26px; height: 26px; border-radius: 50%; background: var(--winner); color: #000; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
@@ -205,6 +198,31 @@
   .cookie-guide-text code { background: var(--card2); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
   .cookie-guide-text kbd { background: var(--card2); padding: 1px 6px; border-radius: 4px; font-size: 12px; border: 1px solid var(--border); }
   .cookie-guide-divider { height: 1px; background: var(--border); margin: 8px 0; }
+
+  /* Bookmarklet */
+  .bookmarklet-zone {
+    background: var(--bg); border: 1px solid var(--accent);
+    border-radius: 10px; padding: 20px; text-align: center;
+    margin-bottom: 16px;
+  }
+  .bookmarklet-zone p { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
+  .bookmarklet-link {
+    display: inline-block; padding: 10px 24px;
+    background: var(--accent); color: #000; font-weight: 700;
+    border-radius: 8px; text-decoration: none; font-size: 14px;
+    cursor: grab; user-select: none;
+  }
+  .bookmarklet-link:hover { background: #9da3ff; }
+
+  /* Share link */
+  .share-url-box {
+    background: var(--bg); border: 1px solid var(--success);
+    border-radius: 8px; padding: 16px; margin-top: 12px;
+  }
+  .share-url-box input {
+    font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 12px; color: var(--success);
+  }
 
   /* Copy button */
   .copy-btn {
@@ -215,21 +233,6 @@
     transition: all .2s;
   }
   .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
-
-  /* Responsive */
-  @media (max-width: 480px) {
-    .app { padding: 16px 12px 60px; }
-    .header h1 { font-size: 22px; }
-    .card { padding: 16px; }
-  }
-
-  /* Spinner for loading */
-  .spinner {
-    display: inline-block; width: 20px; height: 20px;
-    border: 2px solid var(--border); border-top-color: var(--accent);
-    border-radius: 50%; animation: spin .6s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Seed option */
   .seed-option {
@@ -245,9 +248,7 @@
     border: 2px solid var(--border); margin-top: 2px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
   }
-  .seed-option.selected .seed-radio {
-    border-color: var(--accent);
-  }
+  .seed-option.selected .seed-radio { border-color: var(--accent); }
   .seed-option.selected .seed-radio::after {
     content: ''; width: 8px; height: 8px; border-radius: 50%;
     background: var(--accent);
@@ -255,11 +256,14 @@
   .seed-title { font-size: 14px; font-weight: 600; }
   .seed-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
 
+  /* Lottery fetch */
+  .lottery-fetch-row { display: flex; gap: 8px; align-items: flex-end; }
+  .lottery-fetch-row input { flex: 1; }
+  .lottery-status { font-size: 12px; color: var(--text2); margin-top: 6px; }
+  .lottery-status.ok { color: var(--success); }
+
   /* Toggle */
-  .toggle-row {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 0;
-  }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; }
   .toggle-label { font-size: 14px; }
   .toggle {
     width: 44px; height: 24px; border-radius: 12px;
@@ -274,18 +278,63 @@
   }
   .toggle.on::after { transform: translateX(20px); }
 
+  /* Verification page (shared view) */
+  .verify-page { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; }
+  .verify-page .header { text-align: center; padding: 40px 0 32px; }
+  .verify-page .header h1 { font-size: 28px; font-weight: 700; }
+  .verify-page .header p { color: var(--text2); font-size: 14px; margin-top: 8px; }
+  .verify-page .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+  }
+  .verify-page .card h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .verify-page .winner {
+    font-size: 16px; padding: 10px 0; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .verify-page .winner:last-child { border-bottom: none; }
+  .verify-page .rank {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--winner); color: #000; font-size: 13px; font-weight: 700;
+  }
+  .verify-page .verify-btn {
+    display: inline-flex; padding: 12px 24px;
+    background: var(--accent); color: #000; font-weight: 600;
+    border: none; border-radius: 8px; cursor: pointer; font-size: 14px;
+    margin-top: 12px;
+  }
+  .verify-page .verify-btn:hover { background: #9da3ff; }
+  .verify-page .result-pass { background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.3); color: var(--success); padding: 12px 16px; border-radius: 8px; margin-top: 12px; font-weight: 600; }
+  .verify-page .result-fail { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #f87171; padding: 12px 16px; border-radius: 8px; margin-top: 12px; font-weight: 600; }
+
   /* Hidden */
   .hidden { display: none !important; }
 
-  /* Footer */
-  .footer {
-    text-align: center; padding: 32px 0 16px;
-    font-size: 12px; color: var(--text2);
+  /* Responsive */
+  @media (max-width: 480px) {
+    .app { padding: 16px 12px 60px; }
+    .header h1 { font-size: 22px; }
+    .card { padding: 16px; }
+    .method-tabs { flex-wrap: wrap; }
   }
+
+  /* Spinner */
+  .spinner {
+    display: inline-block; width: 20px; height: 20px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Footer */
+  .footer { text-align: center; padding: 32px 0 16px; font-size: 12px; color: var(--text2); }
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- ==================== TOOL MODE ==================== -->
+<div class="app" id="toolView">
 
   <!-- Header -->
   <div class="header">
@@ -307,19 +356,74 @@
       <h2>录入参与者</h2>
 
       <div class="method-tabs">
-        <div class="method-tab active" data-method="paste">粘贴名单</div>
-        <div class="method-tab" data-method="upload">导入文件</div>
-        <div class="method-tab" data-method="fetch">自动抓取</div>
+        <div class="method-tab active" data-method="fetch">🔄 自动抓取</div>
+        <div class="method-tab" data-method="upload">📂 导入文件</div>
+        <div class="method-tab" data-method="paste">📝 粘贴名单</div>
       </div>
 
-      <!-- Paste -->
-      <div class="method-panel active" id="method-paste">
-        <label>粘贴参与者名单</label>
-        <textarea id="pasteInput" placeholder="每行一个用户名，支持以下格式：&#10;&#10;用户A&#10;用户B&#10;用户C&#10;&#10;或用逗号/顿号分隔：&#10;用户A，用户B，用户C"></textarea>
-        <p style="font-size:12px;color:var(--text2);margin-top:8px;">同一用户多次转发只计一次，自动去重</p>
+      <!-- Fetch (now first) -->
+      <div class="method-panel active" id="method-fetch">
+        <div class="callout callout-info">
+          用 Python 脚本自动抓取微博转发用户，或用书签小工具一键提取 Cookie。
+        </div>
+
+        <!-- Bookmarklet -->
+        <div class="bookmarklet-zone">
+          <p><strong>最快方式：</strong>把下方按钮拖到书签栏，在 m.weibo.cn 页面点击即可复制 Cookie</p>
+          <a class="bookmarklet-link" id="bookmarkletLink" href="javascript:void(function(){if(location.hostname!=='m.weibo.cn'){alert('请先打开 m.weibo.cn 并登录微博');return}var c=document.cookie;if(!c){alert('未找到Cookie，请确保已登录微博');return}navigator.clipboard.writeText(c).then(function(){var d=document.createElement('div');d.textContent='✅ Cookie已复制！回到抽奖工具粘贴即可';d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:%234ade80;color:%23000;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:700;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.3)';document.body.appendChild(d);setTimeout(function(){d.remove()},3000)})}).call(this)">🎲 提取微博Cookie</a>
+          <p style="font-size:11px;margin-top:10px;color:var(--text2);">拖拽此按钮到书签栏 → 打开 m.weibo.cn → 点击书签 → Cookie 自动复制</p>
+        </div>
+
+        <label>微博帖子链接或 ID</label>
+        <input type="text" id="weiboUrl" placeholder="https://m.weibo.cn/status/5123456789012345 或纯数字 ID">
+        <div class="btn-group">
+          <button class="btn btn-primary btn-sm" id="btnFetch">尝试抓取</button>
+        </div>
+
+        <div style="margin-top:20px;">
+          <h3>手动获取 Cookie（备用方案）</h3>
+          <div class="cookie-guide">
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num">1</div>
+              <div class="cookie-guide-text">
+                <strong>Chrome 打开 m.weibo.cn 并登录</strong>
+              </div>
+            </div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num">2</div>
+              <div class="cookie-guide-text">
+                <strong>按 F12 打开开发者工具 → 点「Network」</strong><br>
+                Mac 按 <kbd>Cmd+Option+I</kbd>
+              </div>
+            </div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num">3</div>
+              <div class="cookie-guide-text">
+                <strong>刷新页面，点左侧出现的任意请求名</strong><br>
+                <span style="color:var(--winner)">⬅ 不点请求名，右侧详情面板不会出来</span>
+              </div>
+            </div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num">4</div>
+              <div class="cookie-guide-text">
+                <strong>右侧 Headers → 往下滚 → Request Headers → 复制 cookie 值</strong><br>
+                值以 <code>SUB=</code> 开头，很长一串，双击全选复制
+              </div>
+            </div>
+            <div class="cookie-guide-divider"></div>
+            <div class="cookie-guide-step">
+              <div class="cookie-guide-num" style="background:var(--accent)">5</div>
+              <div class="cookie-guide-text">
+                <strong>运行脚本</strong><br>
+                终端运行 <code>python3 fetch_reposts.py 微博ID</code>，粘贴 Cookie 按回车<br>
+                生成 <code>reposts_微博ID_names.txt</code>，回到这里「导入文件」上传
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Upload -->
+      <!-- Upload (now second) -->
       <div class="method-panel" id="method-upload">
         <div class="upload-zone" id="uploadZone">
           <div style="font-size:24px;margin-bottom:8px;">📄</div>
@@ -329,82 +433,11 @@
         <input type="file" id="fileInput" accept=".txt,.csv,.json" style="display:none">
       </div>
 
-      <!-- Fetch -->
-      <div class="method-panel" id="method-fetch">
-        <div class="callout callout-info">
-          用 Python 脚本自动抓取转发用户。首次运行需要粘贴 Cookie，之后自动记住。
-        </div>
-        <label>微博帖子链接或 ID</label>
-        <input type="text" id="weiboUrl" placeholder="https://m.weibo.cn/status/5123456789012345 或纯数字 ID">
-        <div class="btn-group">
-          <button class="btn btn-primary btn-sm" id="btnFetch">尝试抓取</button>
-        </div>
-
-        <div style="margin-top:20px;">
-          <h3>使用方法</h3>
-          <div class="cookie-guide">
-            <div class="cookie-guide-step">
-              <div class="cookie-guide-num">1</div>
-              <div class="cookie-guide-text">
-                <strong>打开微博并登录</strong><br>
-                Chrome 访问 <code>m.weibo.cn</code>，确保已登录
-              </div>
-            </div>
-            <div class="cookie-guide-step">
-              <div class="cookie-guide-num">2</div>
-              <div class="cookie-guide-text">
-                <strong>打开开发者工具</strong><br>
-                按 <kbd>F12</kbd>（Mac 按 <kbd>Cmd+Option+I</kbd>），点顶部 <strong>「Network」</strong> 标签
-              </div>
-            </div>
-            <div class="cookie-guide-step">
-              <div class="cookie-guide-num">3</div>
-              <div class="cookie-guide-text">
-                <strong>刷新页面，让请求出现</strong><br>
-                在微博页面上按 <kbd>F5</kbd> 刷新，Network 面板会出现一堆请求
-              </div>
-            </div>
-            <div class="cookie-guide-step">
-              <div class="cookie-guide-num">4</div>
-              <div class="cookie-guide-text">
-                <strong>点左侧任意请求名</strong><br>
-                比如 <code>config</code>、<code>feed</code>、<code>hotflow</code> 随便点一个<br>
-                <span style="color:var(--winner)">⬅ 这是关键一步！不点的话右边详情面板不会出来</span>
-              </div>
-            </div>
-            <div class="cookie-guide-step">
-              <div class="cookie-guide-num">5</div>
-              <div class="cookie-guide-text">
-                <strong>右侧面板 → Headers → 往下滚 → 找 Request Headers</strong><br>
-                确认右侧顶部 <strong>Headers</strong> 标签是被选中的（默认就是），然后往下滚，找到 <strong>「Request Headers」</strong> 小标题，点击它展开
-              </div>
-            </div>
-            <div class="cookie-guide-step">
-              <div class="cookie-guide-num">6</div>
-              <div class="cookie-guide-text">
-                <strong>复制 cookie 值</strong><br>
-                找到 <code>cookie:</code> 那行（值以 <code>SUB=</code> 开头，很长一串），双击值全选，<kbd>Ctrl+C</kbd> / <kbd>Cmd+C</kbd> 复制
-              </div>
-            </div>
-            <div class="cookie-guide-divider"></div>
-            <div class="cookie-guide-step">
-              <div class="cookie-guide-num" style="background:var(--accent)">7</div>
-              <div class="cookie-guide-text">
-                <strong>运行脚本</strong><br>
-                终端运行 <code>python3 fetch_reposts.py 微博ID</code>，粘贴刚才复制的 Cookie，按回车<br>
-                脚本自动抓取，生成 <code>reposts_微博ID_names.txt</code><br>
-                💡 Cookie 会自动缓存到本地，下次不用再输入
-              </div>
-            </div>
-            <div class="cookie-guide-step">
-              <div class="cookie-guide-num" style="background:var(--accent)">8</div>
-              <div class="cookie-guide-text">
-                <strong>导入名单</strong><br>
-                回到这里，点上方「导入文件」上传生成的 TXT 文件
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- Paste (now third) -->
+      <div class="method-panel" id="method-paste">
+        <label>粘贴参与者名单</label>
+        <textarea id="pasteInput" placeholder="每行一个用户名，支持以下格式：&#10;&#10;用户A&#10;用户B&#10;用户C&#10;&#10;或用逗号/顿号分隔：&#10;用户A，用户B，用户C"></textarea>
+        <p style="font-size:12px;color:var(--text2);margin-top:8px;">同一用户多次转发只计一次，自动去重</p>
       </div>
     </div>
 
@@ -438,8 +471,8 @@
         <div class="seed-option selected" data-seed="lottery">
           <div class="seed-radio"></div>
           <div>
-            <div class="seed-title">🎲 公开奖号（推荐）</div>
-            <div class="seed-desc">使用中国福利彩票或体育彩票某期开奖号码作为种子，开奖前无法预测，开奖后人人可查</div>
+            <div class="seed-title">🎲 中国福彩开奖号码（推荐）</div>
+            <div class="seed-desc">使用双色球开奖号码作为种子，开奖前无法预测，开奖后人人可查</div>
           </div>
         </div>
 
@@ -447,7 +480,7 @@
           <div class="seed-radio"></div>
           <div>
             <div class="seed-title">₿ 比特币区块哈希</div>
-            <div class="seed-desc">使用指定高度比特币区块的哈希值作为种子，完全不可预测且公开可查</div>
+            <div class="seed-desc">使用指定高度比特币区块的哈希值作为种子</div>
           </div>
         </div>
 
@@ -455,16 +488,20 @@
           <div class="seed-radio"></div>
           <div>
             <div class="seed-title">✏️ 自定义种子</div>
-            <div class="seed-desc">输入任意文字作为种子。适合非正式抽奖或已预先公布的种子</div>
+            <div class="seed-desc">输入任意文字作为种子，适合非正式抽奖</div>
           </div>
         </div>
       </div>
 
       <!-- Lottery seed detail -->
       <div class="seed-detail" id="seedDetail-lottery">
-        <label>彩票信息</label>
-        <input type="text" id="lotteryInfo" placeholder="例：双色球第2025061期，开奖号码 03 08 15 22 27 33 + 11">
-        <p style="font-size:12px;color:var(--text2);margin-top:6px;">开奖前先公布"将使用XX期开奖号码"，开奖后填入号码即可</p>
+        <label>开奖号码</label>
+        <div class="lottery-fetch-row">
+          <input type="text" id="lotteryInfo" placeholder="例：双色球第2025061期 03 08 15 22 27 33 + 11">
+          <button class="btn btn-secondary btn-sm" id="btnFetchLottery" style="white-space:nowrap;">获取最新</button>
+        </div>
+        <div class="lottery-status" id="lotteryStatus"></div>
+        <p style="font-size:12px;color:var(--text2);margin-top:6px;">开奖前先公布"将使用XX期开奖号码"，开奖后点击「获取最新」自动填入</p>
       </div>
 
       <!-- Bitcoin seed detail -->
@@ -556,39 +593,167 @@
         2. 计算 SHA-256(名单.join(",")) 得到名单哈希<br>
         3. 对每个参与者，计算 SHA-256(种子 + ":" + 用户名 + ":" + 名单哈希) 得到分数<br>
         4. 按分数从小到大排序，前 N 名即为中奖者<br>
-        5. 与公示结果比对，完全一致则验证通过<br><br>
-        <strong>或者：</strong>点击下方"生成独立验证页"，得到一个自包含 HTML 文件，浏览器打开即可一键验证。
+        5. 与公示结果比对，完全一致则验证通过
       </div>
     </div>
 
     <div class="btn-group">
       <button class="btn btn-secondary" id="btnBack4">← 返回</button>
-      <button class="btn btn-primary" id="btnExport">📦 生成独立公示页</button>
+      <button class="btn btn-primary" id="btnShareLink">🔗 生成分享链接</button>
+      <button class="btn btn-secondary" id="btnExport">📦 下载公示页</button>
       <button class="btn btn-secondary" id="btnCopyResults">📋 复制公示文本</button>
+    </div>
+
+    <div class="hidden" id="shareLinkBox" style="margin-top:16px;">
+      <div class="share-url-box">
+        <p style="font-size:13px;margin-bottom:8px;"><strong>🔗 分享链接</strong> — 任何人打开即可查看公示并一键验证</p>
+        <input type="text" id="shareUrl" readonly style="width:100%;" onclick="this.select()">
+        <div class="btn-group" style="margin-top:8px;">
+          <button class="btn btn-primary btn-sm" id="btnCopyShareUrl">📋 复制链接</button>
+        </div>
+        <p style="font-size:11px;color:var(--text2);margin-top:6px;">链接数据自包含，无需服务器，永久有效。链接较长是因为包含了完整参与者名单。</p>
+      </div>
     </div>
   </div>
 
   <div class="footer">
-    转发抽奖工具 · 本地运行 · 无数据上传 · 算法公开可验证
+    微博抽奖工具 · 本地运行 · 无数据上传 · 算法公开可验证
   </div>
 
+</div>
+
+<!-- ==================== VERIFICATION MODE (shared URL) ==================== -->
+<div class="verify-page hidden" id="verifyView">
+  <div class="header">
+    <h1>微博抽奖公示</h1>
+    <p>算法公开 · 结果可验证</p>
+  </div>
+
+  <div class="card">
+    <h2>基本信息</h2>
+    <div id="vvInfo"></div>
+  </div>
+
+  <div class="card">
+    <h2>🎉 中奖名单</h2>
+    <div id="vvWinners"></div>
+  </div>
+
+  <div class="card">
+    <h2>验证数据</h2>
+    <div id="vvData" class="verify-box"></div>
+  </div>
+
+  <div class="card">
+    <h2>完整参与者名单</h2>
+    <div id="vvParticipants" style="max-height:200px;overflow-y:auto;font-size:13px;color:var(--text2);line-height:1.8;"></div>
+  </div>
+
+  <div class="card">
+    <h2>一键验证</h2>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:8px;">点击按钮，自动使用相同算法验证结果是否一致</p>
+    <button class="verify-page .verify-btn" style="padding:12px 24px;background:var(--accent);color:#000;font-weight:600;border:none;border-radius:8px;cursor:pointer;font-size:14px;" id="btnVerifyResult">🔍 验证结果</button>
+    <div id="vvResult"></div>
+  </div>
+
+  <div class="footer">
+    微博抽奖工具 · 算法公开可验证
+  </div>
 </div>
 
 <script>
 // ==================== State ====================
 const state = {
-  participants: [],     // deduplicated, sorted
+  participants: [],
   rawInput: '',
   winnerCount: 1,
   seedType: 'lottery',
   seedValue: '',
   commitmentHash: '',
-  winners: [],           // [{name, score}]
+  winners: [],
   drawDone: false,
 };
 
-// ==================== DOM refs ====================
 const $ = id => document.getElementById(id);
+
+// ==================== URL Hash Verification Mode ====================
+(function checkHashMode() {
+  const hash = location.hash;
+  if (!hash || !hash.startsWith('#result=')) return;
+
+  try {
+    const encoded = hash.slice(8); // remove '#result='
+    const json = atob(encoded.replace(/-/g, '+').replace(/_/g, '/').replace(/\./g, '='));
+    const data = JSON.parse(json);
+
+    if (!data.p || !data.s || !data.w) return;
+
+    // Show verification view
+    $('toolView').classList.add('hidden');
+    $('verifyView').classList.remove('hidden');
+    document.title = '微博抽奖公示';
+
+    // Populate info
+    const seedLabel = {lottery:'中国福彩开奖号码', bitcoin:'比特币区块哈希', custom:'自定义种子'}[data.st] || data.st;
+    $('vvInfo').innerHTML = `
+      <p><strong>抽奖时间：</strong>${escHtml(data.t || '未知')}</p>
+      <p><strong>参与人数：</strong>${data.p.length}</p>
+      <p><strong>中奖人数：</strong>${data.w.length}</p>
+      <p><strong>种子来源：</strong>${escHtml(seedLabel)}</p>
+      <p><strong>种子值：</strong>${escHtml(data.s)}</p>
+    `;
+
+    // Winners
+    $('vvWinners').innerHTML = data.w.map((w, i) =>
+      `<div class="winner"><span class="rank">${i+1}</span><strong>${escHtml(w)}</strong></div>`
+    ).join('');
+
+    // Store for verification
+    window._verifyData = data;
+
+  } catch (e) {
+    console.error('Failed to parse result hash:', e);
+  }
+})();
+
+// Verify button
+if ($('btnVerifyResult')) {
+  $('btnVerifyResult').addEventListener('click', async () => {
+    const d = window._verifyData;
+    if (!d) return;
+
+    const resultDiv = $('vvResult');
+    resultDiv.innerHTML = '<p style="color:var(--text2);">验证中…</p>';
+
+    try {
+      const listHash = await sha256(d.p.join(','));
+      const scored = [];
+      for (const name of d.p) {
+        const score = await sha256(d.s + ':' + name + ':' + listHash);
+        scored.push({ name, score });
+      }
+      scored.sort((a, b) => a.score.localeCompare(b.score));
+      const actualWinners = scored.slice(0, d.w.length).map(w => w.name);
+      const pass = JSON.stringify(actualWinners) === JSON.stringify(d.w);
+
+      // Show hash
+      $('vvData').innerHTML = `
+        <span class="label">名单哈希 (SHA-256)</span><br>${listHash}<br><br>
+        <span class="label">中奖者分数</span><br>
+        ${scored.slice(0, d.w.length).map((w, i) => `${i+1}. ${escHtml(w.name)} → ${w.score}`).join('<br>')}
+      `;
+
+      // Show participants
+      $('vvParticipants').textContent = d.p.join('、');
+
+      resultDiv.innerHTML = pass
+        ? '<div class="result-pass" style="background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:var(--success);padding:12px 16px;border-radius:8px;margin-top:12px;font-weight:600;">✅ 验证通过！抽奖结果与算法计算完全一致</div>'
+        : '<div class="result-fail" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;padding:12px 16px;border-radius:8px;margin-top:12px;font-weight:600;">❌ 验证失败！结果与算法计算不一致</div>';
+    } catch (e) {
+      resultDiv.innerHTML = `<p style="color:#f87171;">验证出错: ${e.message}</p>`;
+    }
+  });
+}
 
 // ==================== Step navigation ====================
 function goToStep(n) {
@@ -624,9 +789,7 @@ document.querySelectorAll('.method-tab').forEach(tab => {
 // Parse input
 function parseInput(text) {
   if (!text.trim()) return [];
-  // Support: newline, comma, Chinese comma, tab, semicolon
   let names = text.split(/[\n,，;\t]+/).map(s => s.trim()).filter(Boolean);
-  // Deduplicate (case-sensitive)
   return [...new Set(names)];
 }
 
@@ -702,20 +865,20 @@ function handleFile(file) {
   reader.readAsText(file);
 }
 
-// Fetch attempt (limited - CORS will likely block this from browser)
+// Fetch attempt (CORS will likely block, fallback to Python script)
 $('btnFetch').addEventListener('click', async () => {
   const url = $('weiboUrl').value.trim();
   if (!url) return alert('请输入微博链接或 ID');
 
   let postId = url;
-  const match = url.match(/status\/(\d+)/);
+  const match = url.match(/status\/(\w+)/);
   if (match) postId = match[1];
 
   try {
     $('btnFetch').textContent = '抓取中...';
     $('btnFetch').disabled = true;
 
-    const resp = await fetch(`https://m.weibo.cn/api/statuses/repost?id=${postId}&page=1`, {
+    const resp = await fetch(`https://m.weibo.cn/api/statuses/repostTimeline?id=${postId}&page=1`, {
       credentials: 'omit',
       headers: { 'Accept': 'application/json' }
     });
@@ -723,11 +886,11 @@ $('btnFetch').addEventListener('click', async () => {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
 
-    if (data.data && data.data.reposts) {
-      const names = data.data.reposts.map(r => r.user?.screen_name).filter(Boolean);
+    if (data.data && data.data.data) {
+      const names = data.data.data.map(r => r.user?.screen_name).filter(Boolean);
       $('pasteInput').value = names.join('\n');
       updatePreview();
-      alert(`第一页抓取到 ${names.length} 位转发用户，如需更多请使用 Python 脚本`);
+      alert(`第一页抓取到 ${names.length} 位转发用户，如需完整列表请使用 Python 脚本`);
     } else {
       throw new Error('无数据');
     }
@@ -739,7 +902,6 @@ $('btnFetch').addEventListener('click', async () => {
   }
 });
 
-// Next buttons
 $('btnNext1').addEventListener('click', () => goToStep(2));
 
 // ==================== Step 2: Settings ====================
@@ -756,6 +918,60 @@ document.querySelectorAll('.seed-option').forEach(opt => {
     $(`seedDetail-${opt.dataset.seed}`).classList.remove('hidden');
     validateStep2();
   });
+});
+
+// Fetch lottery results
+$('btnFetchLottery').addEventListener('click', async () => {
+  const btn = $('btnFetchLottery');
+  const statusDiv = $('lotteryStatus');
+  btn.disabled = true;
+  btn.textContent = '获取中…';
+  statusDiv.textContent = '';
+  statusDiv.className = 'lottery-status';
+
+  try {
+    // Try the Cloudflare Function proxy first
+    const base = location.origin;
+    const resp = await fetch(`${base}/api/lottery`, { headers: { 'Accept': 'application/json' } });
+    const data = await resp.json();
+
+    if (data.ok) {
+      // Format: "05|11|21|23|24|29|16"
+      const nums = data.number.split('|');
+      const blue = nums.pop();
+      const reds = nums;
+      const seedStr = `双色球第${data.qihao}期 ${reds.join(' ')} + ${blue}`;
+
+      $('lotteryInfo').value = seedStr;
+      statusDiv.textContent = `✅ 已获取第${data.qihao}期 (${data.time})`;
+      statusDiv.className = 'lottery-status ok';
+      validateStep2();
+    } else {
+      throw new Error(data.msg || '获取失败');
+    }
+  } catch (e) {
+    // Fallback: direct API call (may fail due to CORS)
+    try {
+      const resp2 = await fetch('https://cn.apihz.cn/api/caipiao/shuangseqiu.php?id=88888888&key=88888888');
+      const data2 = await resp2.json();
+      if (data2.code === 200) {
+        const nums = data2.number.split('|');
+        const blue = nums.pop();
+        const seedStr = `双色球第${data2.qihao}期 ${nums.join(' ')} + ${blue}`;
+        $('lotteryInfo').value = seedStr;
+        statusDiv.textContent = `✅ 已获取第${data2.qihao}期`;
+        statusDiv.className = 'lottery-status ok';
+        validateStep2();
+      } else {
+        statusDiv.textContent = '⚠️ ' + (data2.msg || '获取失败，请手动输入');
+      }
+    } catch (e2) {
+      statusDiv.textContent = '⚠️ 网络错误，请手动输入开奖号码';
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '获取最新';
+  }
 });
 
 function getSeedValue() {
@@ -813,7 +1029,6 @@ async function executeDraw() {
   const listHash = await sha256(names.join(','));
   const count = state.winnerCount;
 
-  // Compute scores
   const scored = [];
   for (const name of names) {
     const score = await sha256(`${seed}:${name}:${listHash}`);
@@ -822,10 +1037,8 @@ async function executeDraw() {
   scored.sort((a, b) => a.score.localeCompare(b.score));
   state.winners = scored.slice(0, count);
 
-  // Animation
   await animateDraw(names, count, scored);
 
-  // Show winners
   const list = $('winnerList');
   list.innerHTML = '';
   state.winners.forEach((w, i) => {
@@ -852,26 +1065,21 @@ async function animateDraw(names, count, scored) {
   drawLabel.textContent = '抽取中…';
   drawCounter.textContent = '';
 
-  // Rapid name cycling animation
   const duration = 3000;
   const start = Date.now();
-  let frameCount = 0;
 
   return new Promise(resolve => {
     function frame() {
       const elapsed = Date.now() - start;
       const progress = Math.min(elapsed / duration, 1);
-      // Ease-out: slow down at the end
       const interval = 40 + progress * 300;
 
-      // Show random names
       const randomName = names[Math.floor(Math.random() * names.length)];
       drawNames.textContent = randomName;
 
       if (progress < 1) {
         setTimeout(frame, interval);
       } else {
-        // Reveal winners one by one
         revealWinners(scored.slice(0, count), 0, drawNames, drawLabel, drawCounter, resolve);
       }
     }
@@ -902,17 +1110,18 @@ function revealWinners(winners, index, drawNames, drawLabel, drawCounter, resolv
 
 $('btnBack4').addEventListener('click', () => goToStep(3));
 
+// Export standalone HTML
 $('btnExport').addEventListener('click', () => {
   const html = generateStandalonePage();
   downloadFile(`抽奖公示_${new Date().toISOString().slice(0,10)}.html`, html, 'text/html');
 });
 
+// Copy results text
 $('btnCopyResults').addEventListener('click', () => {
   const text = buildResultsText();
   navigator.clipboard.writeText(text).then(() => {
     alert('公示文本已复制到剪贴板');
   }).catch(() => {
-    // Fallback
     const ta = document.createElement('textarea');
     ta.value = text;
     document.body.appendChild(ta);
@@ -923,8 +1132,51 @@ $('btnCopyResults').addEventListener('click', () => {
   });
 });
 
+// Generate shareable link
+$('btnShareLink').addEventListener('click', async () => {
+  const btn = $('btnShareLink');
+  btn.disabled = true;
+  btn.textContent = '生成中…';
+
+  try {
+    const resultData = {
+      p: state.participants,       // participants array
+      s: state.seedValue,           // seed value
+      st: state.seedType,           // seed type
+      w: state.winners.map(w => w.name), // winner names
+      t: new Date().toLocaleString('zh-CN'), // timestamp
+    };
+
+    const json = JSON.stringify(resultData);
+    // URL-safe base64
+    const encoded = btoa(unescape(encodeURIComponent(json)))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '.');
+
+    const shareUrl = `${location.origin}${location.pathname}#result=${encoded}`;
+    $('shareUrl').value = shareUrl;
+    $('shareLinkBox').classList.remove('hidden');
+  } catch (e) {
+    alert('生成链接失败: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔗 生成分享链接';
+  }
+});
+
+$('btnCopyShareUrl').addEventListener('click', () => {
+  const url = $('shareUrl').value;
+  navigator.clipboard.writeText(url).then(() => {
+    $('btnCopyShareUrl').textContent = '✅ 已复制';
+    setTimeout(() => { $('btnCopyShareUrl').textContent = '📋 复制链接'; }, 2000);
+  }).catch(() => {
+    $('shareUrl').select();
+    document.execCommand('copy');
+    $('btnCopyShareUrl').textContent = '✅ 已复制';
+    setTimeout(() => { $('btnCopyShareUrl').textContent = '📋 复制链接'; }, 2000);
+  });
+});
+
 function buildResultsPage() {
-  // Info
   $('verifyInfo').innerHTML = `
     <span class="label">抽奖时间</span> ${new Date().toLocaleString('zh-CN')}<br>
     <span class="label">参与人数</span> ${state.participants.length}<br>
@@ -934,13 +1186,9 @@ function buildResultsPage() {
     ${state.commitmentHash ? `<span class="label">名单承诺</span> ${state.commitmentHash}<br>` : ''}
   `;
 
-  // Verification data
-  const listHash = sha256Sync(state.participants.join(','));  // we'll compute async below
   $('verifyData').innerHTML = `<span class="label">名单哈希 (SHA-256)</span><br><span id="listHashVal">计算中…</span>`;
 
   sha256(state.participants.join(',')).then(hash => {
-    $('listHashVal').textContent = hash;
-    // Also add winner verification
     let html = `<span class="label">名单哈希 (SHA-256)</span><br>${hash}<br><br>`;
     html += `<span class="label">中奖者及分数</span><br>`;
     state.winners.forEach((w, i) => {
@@ -949,12 +1197,11 @@ function buildResultsPage() {
     $('verifyData').innerHTML = html;
   });
 
-  // Participants
   $('verifyParticipants').textContent = state.participants.join('、');
 }
 
 function buildResultsText() {
-  let text = `【转发抽奖公示】\n`;
+  let text = `【微博抽奖公示】\n`;
   text += `抽奖时间：${new Date().toLocaleString('zh-CN')}\n`;
   text += `参与人数：${state.participants.length}\n`;
   text += `中奖人数：${state.winnerCount}\n`;
@@ -962,9 +1209,7 @@ function buildResultsText() {
   text += `种子值：${state.seedValue}\n`;
   if (state.commitmentHash) text += `名单承诺哈希：${state.commitmentHash}\n`;
   text += `\n【中奖名单】\n`;
-  state.winners.forEach((w, i) => {
-    text += `${i + 1}. ${w.name}\n`;
-  });
+  state.winners.forEach((w, i) => { text += `${i + 1}. ${w.name}\n`; });
   text += `\n【验证方法】\n`;
   text += `1. 将参与者名单按 Unicode 升序排列\n`;
   text += `2. 计算 SHA-256(名单.join(",")) 得名单哈希\n`;
@@ -1008,7 +1253,6 @@ function generateStandalonePage() {
 </head>
 <body>
 <h1>微博抽奖公示</h1>
-
 <div class="card">
   <h2>基本信息</h2>
   <p><strong>抽奖时间：</strong>${timestamp}</p>
@@ -1018,12 +1262,10 @@ function generateStandalonePage() {
   <p><strong>种子值：</strong>${escHtml(seed)}</p>
   ${commitmentHash ? `<p><strong>名单承诺哈希：</strong></p><div class="hash">${commitmentHash}</div>` : ''}
 </div>
-
 <div class="card">
   <h2>🎉 中奖名单</h2>
   ${winners.map((w, i) => `<div class="winner"><span class="rank">${i+1}</span><strong>${escHtml(w.name)}</strong></div>`).join('')}
 </div>
-
 <div class="card">
   <h2>验证数据</h2>
   <p><strong>完整参与者名单哈希：</strong></p>
@@ -1031,19 +1273,16 @@ function generateStandalonePage() {
   <p style="margin-top:12px;"><strong>中奖者分数：</strong></p>
   ${winners.map((w, i) => `<div style="font-size:13px;margin:4px 0;">${i+1}. ${escHtml(w.name)} → <span style="font-family:monospace;color:#888;">${w.score}</span></div>`).join('')}
 </div>
-
 <div class="card">
   <h2>完整参与者名单</h2>
   <div id="participants">${participants.map(p => escHtml(p)).join('、')}</div>
 </div>
-
 <div class="card">
   <h2>一键验证</h2>
   <p style="font-size:13px;color:#666;">点击下方按钮，自动使用相同算法验证结果是否一致</p>
   <button class="btn" onclick="verify()">🔍 验证结果</button>
   <div id="verifyResult"></div>
 </div>
-
 <div class="card">
   <h2>验证方法（手动）</h2>
   <p style="font-size:13px;color:#666;">
@@ -1054,27 +1293,22 @@ function generateStandalonePage() {
     5. 与公示结果比对，完全一致则验证通过
   </p>
 </div>
-
 <script>
 const participants = ${JSON.stringify(participants)};
 const seed = ${JSON.stringify(seed)};
 const expectedWinners = ${JSON.stringify(winners.map(w => w.name))};
 const winnerCount = ${winnerCount};
-
 async function sha256(str) {
   const buf = new TextEncoder().encode(str);
   const hash = await crypto.subtle.digest('SHA-256', buf);
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
-
 async function verify() {
   const resultDiv = document.getElementById('verifyResult');
   resultDiv.innerHTML = '<p>验证中…</p>';
-
   try {
     const listHash = await sha256(participants.join(','));
     document.getElementById('listHash').textContent = listHash;
-
     const scored = [];
     for (const name of participants) {
       const score = await sha256(seed + ':' + name + ':' + listHash);
@@ -1082,21 +1316,14 @@ async function verify() {
     }
     scored.sort((a, b) => a.score.localeCompare(b.score));
     const actualWinners = scored.slice(0, winnerCount).map(w => w.name);
-
     const pass = JSON.stringify(actualWinners) === JSON.stringify(expectedWinners);
-
     resultDiv.innerHTML = '<div class="result ' + (pass ? 'pass' : 'fail') + '">' +
-      (pass ? '✅ 验证通过！抽奖结果与算法计算完全一致' : '❌ 验证失败！结果与算法计算不一致') +
-      '</div>';
+      (pass ? '✅ 验证通过！抽奖结果与算法计算完全一致' : '❌ 验证失败！结果与算法计算不一致') + '</div>';
   } catch (e) {
     resultDiv.innerHTML = '<div class="result fail">验证出错: ' + e.message + '</div>';
   }
 }
-
-// Auto-compute list hash on load
-sha256(participants.join(',')).then(h => {
-  document.getElementById('listHash').textContent = h;
-});
+sha256(participants.join(',')).then(h => { document.getElementById('listHash').textContent = h; });
 <\/script>
 </body>
 </html>`;
@@ -1110,11 +1337,6 @@ async function sha256(str) {
   return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function sha256Sync(str) {
-  // Just a placeholder - real computation is async
-  return '(async computed)';
-}
-
 function escHtml(s) {
   const d = document.createElement('div');
   d.textContent = s;
@@ -1123,7 +1345,7 @@ function escHtml(s) {
 
 function seedTypeLabel(type) {
   switch (type) {
-    case 'lottery': return '公开彩票开奖号码';
+    case 'lottery': return '中国福彩开奖号码';
     case 'bitcoin': return '比特币区块哈希';
     case 'custom': return '自定义种子';
     default: return type;
@@ -1132,9 +1354,7 @@ function seedTypeLabel(type) {
 
 function copyText(elemId) {
   const text = $(elemId).textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    // Brief visual feedback
-  });
+  navigator.clipboard.writeText(text);
 }
 
 function downloadFile(name, content, type) {
@@ -1146,7 +1366,6 @@ function downloadFile(name, content, type) {
   a.click();
   URL.revokeObjectURL(url);
 }
-
 </script>
 </body>
 </html>
