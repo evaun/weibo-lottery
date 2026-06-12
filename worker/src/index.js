@@ -36,7 +36,6 @@ const ALLOWED_ORIGINS = [
 ];
 
 const BASE_CORS = {
-  'Access-Control-Allow-Origin': 'https://weibo-lottery.pages.dev',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Content-Type': 'application/json; charset=utf-8',
@@ -44,16 +43,21 @@ const BASE_CORS = {
 
 export default {
   async fetch(request) {
-    // Dynamic CORS origin
-    const origin = request.headers.get('Origin') || '';
+    // 反射任意来源（Cookie 在请求体中传递，不涉及 credentials，安全）
+    const origin = request.headers.get('Origin') || '*';
     const corsHeaders = {
       ...BASE_CORS,
-      'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : BASE_CORS['Access-Control-Allow-Origin'],
+      'Access-Control-Allow-Origin': origin,
     };
 
     // CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders });
+    }
+
+    // 健康检查（浏览器直接打开 Worker 网址可见）
+    if (request.method === 'GET') {
+      return new Response(JSON.stringify({ ok: true, msg: 'Worker 运行正常', version: 'v1.3' }), { headers: corsHeaders });
     }
 
     // Only POST
