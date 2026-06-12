@@ -930,44 +930,24 @@ $('btnFetchLottery').addEventListener('click', async () => {
   statusDiv.className = 'lottery-status';
 
   try {
-    // Try the Cloudflare Function proxy first
-    const base = location.origin;
-    const resp = await fetch(`${base}/api/lottery`, { headers: { 'Accept': 'application/json' } });
+    // 直接调用 apihz.cn（支持 CORS）
+    const resp = await fetch('https://cn.apihz.cn/api/caipiao/shuangseqiu.php?id=88888888&key=88888888');
     const data = await resp.json();
 
-    if (data.ok) {
-      // Format: "05|11|21|23|24|29|16"
+    if (data.code === 200) {
       const nums = data.number.split('|');
       const blue = nums.pop();
-      const reds = nums;
-      const seedStr = `双色球第${data.qihao}期 ${reds.join(' ')} + ${blue}`;
+      const seedStr = `双色球第${data.qihao}期 ${nums.join(' ')} + ${blue}`;
 
       $('lotteryInfo').value = seedStr;
       statusDiv.textContent = `✅ 已获取第${data.qihao}期 (${data.time})`;
       statusDiv.className = 'lottery-status ok';
       validateStep2();
     } else {
-      throw new Error(data.msg || '获取失败');
+      statusDiv.textContent = '⚠️ ' + (data.msg || '获取失败，请手动输入');
     }
   } catch (e) {
-    // Fallback: direct API call (may fail due to CORS)
-    try {
-      const resp2 = await fetch('https://cn.apihz.cn/api/caipiao/shuangseqiu.php?id=88888888&key=88888888');
-      const data2 = await resp2.json();
-      if (data2.code === 200) {
-        const nums = data2.number.split('|');
-        const blue = nums.pop();
-        const seedStr = `双色球第${data2.qihao}期 ${nums.join(' ')} + ${blue}`;
-        $('lotteryInfo').value = seedStr;
-        statusDiv.textContent = `✅ 已获取第${data2.qihao}期`;
-        statusDiv.className = 'lottery-status ok';
-        validateStep2();
-      } else {
-        statusDiv.textContent = '⚠️ ' + (data2.msg || '获取失败，请手动输入');
-      }
-    } catch (e2) {
-      statusDiv.textContent = '⚠️ 网络错误，请手动输入开奖号码';
-    }
+    statusDiv.textContent = '⚠️ 网络错误，请手动输入开奖号码';
   } finally {
     btn.disabled = false;
     btn.textContent = '获取最新';
