@@ -597,7 +597,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v1.3 · 算法公开可验证<br>
+    微博抽奖工具 v1.4 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 
@@ -638,7 +638,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v1.3 · 算法公开可验证<br>
+    微博抽奖工具 v1.4 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 </div>
@@ -878,7 +878,7 @@ $('btnFetch').addEventListener('click', async () => {
     $('fetchStatus').textContent = `正在抓取第 ${page} 页… 已获取 ${allUsers.size} 人`;
 
     try {
-      const resp = await fetch('https://weibo-lottery-api.evaun0203.workers.dev/', {
+      const resp = await fetch('/api/fetch-reposts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cookie, post_id: postId, page }),
