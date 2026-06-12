@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>转发抽奖 · 公平可验证</title>
+<style>
+  :root {
+    --bg: #0e1019;
+    --card: #161922;
+    --card2: #1d2130;
+    --border: #2a2f42;
+    --text: #e8eaf0;
+    --text2: #8b90a5;
+    --accent: #7c83f5;
+    --accent2: #5c62d0;
+    --success: #4ade80;
+    --winner: #fbbf24;
+    --radius: 12px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  .app { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; }
+
+  /* Header */
+  .header { text-align: center; padding: 40px 0 32px; }
+  .header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+  .header h1 em { font-style: normal; color: var(--accent); }
+  .header p { color: var(--text2); font-size: 14px; margin-top: 8px; }
+
+  /* Steps indicator */
+  .steps-bar {
+    display: flex; gap: 4px; margin: 0 0 32px;
+    background: var(--card); border-radius: 8px; padding: 4px;
+  }
+  .step-tab {
+    flex: 1; text-align: center; padding: 10px 0;
+    font-size: 13px; font-weight: 600; color: var(--text2);
+    border-radius: 6px; cursor: pointer; transition: all .2s;
+    user-select: none;
+  }
+  .step-tab.active { background: var(--accent); color: #000; }
+  .step-tab.done { background: var(--card2); color: var(--success); }
+
+  /* Panels */
+  .panel { display: none; animation: fadeUp .3s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  /* Card */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+  }
+  .card h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text2); }
+
+  /* Form elements */
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+  input[type="text"], input[type="number"], textarea, select {
+    width: 100%; padding: 12px 14px; font-size: 14px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); outline: none;
+    transition: border-color .2s;
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 160px; font-family: inherit; line-height: 1.5; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 12px 24px; font-size: 14px; font-weight: 600;
+    border: none; border-radius: 8px; cursor: pointer;
+    transition: all .2s; user-select: none;
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: #9da3ff; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: var(--card2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--text2); }
+  .btn-danger { background: var(--accent2); color: #fff; }
+  .btn-sm { padding: 8px 14px; font-size: 12px; }
+  .btn-block { width: 100%; }
+  .btn-group { display: flex; gap: 8px; margin-top: 16px; }
+
+  /* Tag / Badge */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; font-size: 12px; font-weight: 600;
+    border-radius: 20px; background: var(--card2); color: var(--accent);
+    border: 1px solid var(--border);
+  }
+
+  /* Participant list */
+  .participant-stats {
+    display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap;
+  }
+  .stat-item { font-size: 13px; color: var(--text2); }
+  .stat-item strong { color: var(--text); font-size: 20px; font-weight: 800; }
+
+  .participant-preview {
+    max-height: 200px; overflow-y: auto; padding: 12px;
+    background: var(--bg); border-radius: 8px; font-size: 13px;
+    color: var(--text2); line-height: 1.8;
+  }
+  .participant-preview::-webkit-scrollbar { width: 4px; }
+  .participant-preview::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Draw area */
+  .draw-stage {
+    position: relative; text-align: center; padding: 48px 16px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .draw-stage::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, rgba(124,131,245,.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .draw-names {
+    font-size: 22px; font-weight: 700; min-height: 36px;
+    color: var(--accent);
+  }
+  .draw-label { font-size: 13px; color: var(--text2); margin-top: 8px; }
+  .draw-counter { font-size: 48px; font-weight: 900; color: var(--accent); margin: 8px 0; }
+
+  /* Winner card */
+  .winner-list { display: flex; flex-direction: column; gap: 10px; }
+  .winner-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; background: var(--card2);
+    border: 1px solid var(--border); border-radius: 8px;
+    animation: popIn .4s ease backwards;
+  }
+  .winner-item:nth-child(1) { animation-delay: .1s; }
+  .winner-item:nth-child(2) { animation-delay: .2s; }
+  .winner-item:nth-child(3) { animation-delay: .3s; }
+  .winner-item:nth-child(4) { animation-delay: .4s; }
+  .winner-item:nth-child(5) { animation-delay: .5s; }
+  .winner-rank {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--winner); color: #000;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; flex-shrink: 0;
+  }
+  .winner-name { font-size: 15px; font-weight: 600; }
+  .winner-score { font-size: 11px; color: var(--text2); margin-left: auto; font-family: monospace; }
+
+  @keyframes popIn {
+    from { opacity:0; transform: scale(.8) translateY(10px); }
+    to { opacity:1; transform: scale(1) translateY(0); }
+  }
+
+  /* Verification box */
+  .verify-box {
+    background: var(--bg); border: 1px dashed var(--border);
+    border-radius: 8px; padding: 16px; font-family: "SF Mono", "Fira Code", monospace;
+    font-size: 12px; color: var(--text2); line-height: 1.8;
+    word-break: break-all; user-select: all;
+  }
+  .verify-box .label { color: var(--accent); font-weight: 600; }
+
+  /* File upload zone */
+  .upload-zone {
+    border: 2px dashed var(--border); border-radius: 8px;
+    padding: 32px 16px; text-align: center;
+    color: var(--text2); font-size: 14px; cursor: pointer;
+    transition: all .2s;
+  }
+  .upload-zone:hover { border-color: var(--accent); color: var(--accent); }
+  .upload-zone.dragover { border-color: var(--accent); background: rgba(124,131,245,.08); }
+
+  /* Method tabs */
+  .method-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+  .method-tab {
+    padding: 8px 16px; font-size: 13px; font-weight: 600;
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer; color: var(--text2);
+    transition: all .2s;
+  }
+  .method-tab.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+  .method-panel { display: none; }
+  .method-panel.active { display: block; }
+
+  /* Info callout */
+  .callout {
+    padding: 14px 16px; border-radius: 8px; font-size: 13px;
+    line-height: 1.6; margin-bottom: 16px;
+  }
+  .callout-info { background: rgba(124,131,245,.1); border: 1px solid rgba(124,131,245,.2); color: #b0b5f8; }
+  .callout-warn { background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.2); color: #f5d070; }
+  .callout-success { background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.2); color: #6ee0a8; }
+
+  /* Copy button */
+  .copy-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; font-size: 11px; font-weight: 600;
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 4px; cursor: pointer; color: var(--text2);
+    transition: all .2s;
+  }
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    .app { padding: 16px 12px 60px; }
+    .header h1 { font-size: 22px; }
+    .card { padding: 16px; }
+  }
+
+  /* Spinner for loading */
+  .spinner {
+    display: inline-block; width: 20px; height: 20px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin .6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Seed option */
+  .seed-option {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; cursor: pointer; transition: all .2s;
+    margin-bottom: 8px;
+  }
+  .seed-option:hover { border-color: var(--text2); }
+  .seed-option.selected { border-color: var(--accent); background: rgba(124,131,245,.08); }
+  .seed-radio {
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 2px solid var(--border); margin-top: 2px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .seed-option.selected .seed-radio {
+    border-color: var(--accent);
+  }
+  .seed-option.selected .seed-radio::after {
+    content: ''; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+  }
+  .seed-title { font-size: 14px; font-weight: 600; }
+  .seed-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0;
+  }
+  .toggle-label { font-size: 14px; }
+  .toggle {
+    width: 44px; height: 24px; border-radius: 12px;
+    background: var(--border); cursor: pointer; position: relative;
+    transition: background .2s;
+  }
+  .toggle.on { background: var(--accent); }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #fff; transition: transform .2s;
+  }
+  .toggle.on::after { transform: translateX(20px); }
+
+  /* Hidden */
+  .hidden { display: none !important; }
+
+  /* Footer */
+  .footer {
+    text-align: center; padding: 32px 0 16px;
+    font-size: 12px; color: var(--text2);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>转发抽奖 · <em>公平可验证</em></h1>
+    <p>本地运行 · 密码学随机 · 结果可复验</p>
+  </div>
+
+  <!-- Step tabs -->
+  <div class="steps-bar">
+    <div class="step-tab active" data-step="1">1 录入</div>
+    <div class="step-tab" data-step="2">2 设置</div>
+    <div class="step-tab" data-step="3">3 抽取</div>
+    <div class="step-tab" data-step="4">4 公示</div>
+  </div>
+
+  <!-- ============ STEP 1: INPUT ============ -->
+  <div class="panel active" id="step1">
+    <div class="card">
+      <h2>录入参与者</h2>
+
+      <div class="method-tabs">
+        <div class="method-tab active" data-method="paste">粘贴名单</div>
+        <div class="method-tab" data-method="upload">导入文件</div>
+        <div class="method-tab" data-method="fetch">自动抓取</div>
+      </div>
+
+      <!-- Paste -->
+      <div class="method-panel active" id="method-paste">
+        <label>粘贴参与者名单</label>
+        <textarea id="pasteInput" placeholder="每行一个用户名，支持以下格式：&#10;&#10;用户A&#10;用户B&#10;用户C&#10;&#10;或用逗号/顿号分隔：&#10;用户A，用户B，用户C"></textarea>
+        <p style="font-size:12px;color:var(--text2);margin-top:8px;">同一用户多次转发只计一次，自动去重</p>
+      </div>
+
+      <!-- Upload -->
+      <div class="method-panel" id="method-upload">
+        <div class="upload-zone" id="uploadZone">
+          <div style="font-size:24px;margin-bottom:8px;">📄</div>
+          <div>拖拽文件到此处，或点击选择文件</div>
+          <div style="font-size:12px;margin-top:4px;">支持 .txt / .csv / .json</div>
+        </div>
+        <input type="file" id="fileInput" accept=".txt,.csv,.json" style="display:none">
+      </div>
+
+      <!-- Fetch -->
+      <div class="method-panel" id="method-fetch">
+        <div class="callout callout-info">
+          用 Python 脚本自动抓取转发用户。首次运行需要粘贴 Cookie，之后自动记住。
+        </div>
+        <label>微博帖子链接或 ID</label>
+        <input type="text" id="weiboUrl" placeholder="https://m.weibo.cn/status/5123456789012345 或纯数字 ID">
+        <div class="btn-group">
+          <button class="btn btn-primary btn-sm" id="btnFetch">尝试抓取</button>
+        </div>
+
+        <div style="margin-top:20px;">
+          <h3>使用方法（只需两步）</h3>
+          <div class="callout callout-warn" style="font-size:12px;">
+            <strong>第一步：获取 Cookie</strong><br>
+            ① 用 Chrome 打开 <code>m.weibo.cn</code> 并登录微博<br>
+            ② 按 F12 打开开发者工具 → 点顶部「Network」<br>
+            ③ 在微博页面上随便点一下或刷新<br>
+            ④ 左侧点出现的请求 → 右侧找 Request Headers → Cookie<br>
+            ⑤ 双击 Cookie 值全选，Ctrl+C 复制<br><br>
+            <strong>第二步：运行脚本</strong><br>
+            ① 终端运行 <code>python3 fetch_reposts.py 微博ID</code><br>
+            ② 粘贴刚才复制的 Cookie，按回车<br>
+            ③ 脚本自动抓取，生成 <code>reposts_微博ID_names.txt</code><br>
+            ④ 回到这里点上方「导入文件」上传该 TXT<br><br>
+            💡 Cookie 会自动缓存到本地，下次不用再输入
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="card" id="previewCard" style="display:none;">
+      <h2>参与者名单预览</h2>
+      <div class="participant-stats">
+        <div class="stat-item">总人数 <strong id="totalCount">0</strong></div>
+        <div class="stat-item">去重后 <strong id="uniqueCount">0</strong></div>
+        <div class="stat-item">重复 <strong id="dupCount">0</strong></div>
+      </div>
+      <div class="participant-preview" id="participantPreview"></div>
+    </div>
+
+    <div class="btn-group" style="justify-content:flex-end;">
+      <button class="btn btn-primary" id="btnNext1" disabled>下一步 →</button>
+    </div>
+  </div>
+
+  <!-- ============ STEP 2: SETTINGS ============ -->
+  <div class="panel" id="step2">
+    <div class="card">
+      <h2>抽奖设置</h2>
+
+      <label>抽取人数</label>
+      <input type="number" id="winnerCount" min="1" max="999" value="1" style="max-width:160px;">
+
+      <div style="margin-top:24px;">
+        <label>随机种子来源（决定公平性和可验证性）</label>
+
+        <div class="seed-option selected" data-seed="lottery">
+          <div class="seed-radio"></div>
+          <div>
+            <div class="seed-title">🎲 公开奖号（推荐）</div>
+            <div class="seed-desc">使用中国福利彩票或体育彩票某期开奖号码作为种子，开奖前无法预测，开奖后人人可查</div>
+          </div>
+        </div>
+
+        <div class="seed-option" data-seed="bitcoin">
+          <div class="seed-radio"></div>
+          <div>
+            <div class="seed-title">₿ 比特币区块哈希</div>
+            <div class="seed-desc">使用指定高度比特币区块的哈希值作为种子，完全不可预测且公开可查</div>
+          </div>
+        </div>
+
+        <div class="seed-option" data-seed="custom">
+          <div class="seed-radio"></div>
+          <div>
+            <div class="seed-title">✏️ 自定义种子</div>
+            <div class="seed-desc">输入任意文字作为种子。适合非正式抽奖或已预先公布的种子</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lottery seed detail -->
+      <div class="seed-detail" id="seedDetail-lottery">
+        <label>彩票信息</label>
+        <input type="text" id="lotteryInfo" placeholder="例：双色球第2025061期，开奖号码 03 08 15 22 27 33 + 11">
+        <p style="font-size:12px;color:var(--text2);margin-top:6px;">开奖前先公布"将使用XX期开奖号码"，开奖后填入号码即可</p>
+      </div>
+
+      <!-- Bitcoin seed detail -->
+      <div class="seed-detail hidden" id="seedDetail-bitcoin">
+        <label>比特币区块高度</label>
+        <input type="text" id="bitcoinHeight" placeholder="例：890000">
+        <p style="font-size:12px;color:var(--text2);margin-top:6px;">先公布区块高度，等该区块产出后填入哈希值</p>
+        <label style="margin-top:12px;">区块哈希（开奖后填入）</label>
+        <input type="text" id="bitcoinHash" placeholder="000000000000000000020ef2c5d...">
+      </div>
+
+      <!-- Custom seed detail -->
+      <div class="seed-detail hidden" id="seedDetail-custom">
+        <label>自定义种子</label>
+        <input type="text" id="customSeed" placeholder="输入任意文字作为随机种子">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>公示承诺</h2>
+      <div class="callout callout-info">
+        在开奖前，你可以先公布"参与者名单的哈希值"作为承诺，证明名单在抽奖前已确定、开奖后未篡改。
+      </div>
+      <button class="btn btn-secondary btn-sm" id="btnCommit">生成名单承诺哈希</button>
+      <div id="commitResult" class="hidden" style="margin-top:12px;">
+        <div class="verify-box">
+          <span class="label">名单承诺 (SHA-256)</span><br>
+          <span id="commitHash" style="color:var(--success);"></span>
+        </div>
+        <button class="copy-btn" style="margin-top:6px;" onclick="copyText('commitHash')">📋 复制</button>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-secondary" id="btnBack2">← 返回</button>
+      <button class="btn btn-primary" id="btnNext2" disabled>下一步 →</button>
+    </div>
+  </div>
+
+  <!-- ============ STEP 3: DRAW ============ -->
+  <div class="panel" id="step3">
+    <div class="card">
+      <h2>抽取结果</h2>
+
+      <div class="draw-stage" id="drawStage">
+        <div class="draw-label" id="drawLabel">点击下方按钮开始抽奖</div>
+        <div class="draw-names" id="drawNames"></div>
+        <div class="draw-counter" id="drawCounter"></div>
+      </div>
+
+      <div class="btn-group" style="justify-content:center;margin-top:20px;">
+        <button class="btn btn-primary" id="btnDraw" style="font-size:16px;padding:14px 40px;">🎲 开始抽奖</button>
+      </div>
+    </div>
+
+    <!-- Winners -->
+    <div class="card hidden" id="winnersCard">
+      <h2>🎉 中奖名单</h2>
+      <div class="winner-list" id="winnerList"></div>
+    </div>
+
+    <div class="btn-group hidden" id="drawNav">
+      <button class="btn btn-secondary" id="btnBack3">← 返回</button>
+      <button class="btn btn-primary" id="btnNext3">查看公示 →</button>
+    </div>
+  </div>
+
+  <!-- ============ STEP 4: PUBLIC RESULTS ============ -->
+  <div class="panel" id="step4">
+    <div class="card">
+      <h2>📄 抽奖公示</h2>
+      <div class="callout callout-success">
+        以下信息可供任何人独立验证抽奖结果的公平性。算法完全公开，相同输入必得相同结果。
+      </div>
+
+      <h3>基本信息</h3>
+      <div class="verify-box" id="verifyInfo" style="margin-bottom:16px;"></div>
+
+      <h3>验证数据</h3>
+      <div class="verify-box" id="verifyData" style="margin-bottom:16px;"></div>
+
+      <h3>完整参与者名单</h3>
+      <div class="verify-box" id="verifyParticipants" style="margin-bottom:16px;max-height:200px;overflow-y:auto;"></div>
+
+      <h3>验证方法</h3>
+      <div class="callout callout-info" style="font-size:12px;">
+        <strong>如何验证：</strong><br>
+        1. 获取参与者名单，按 Unicode 码点升序排列<br>
+        2. 计算 SHA-256(名单.join(",")) 得到名单哈希<br>
+        3. 对每个参与者，计算 SHA-256(种子 + ":" + 用户名 + ":" + 名单哈希) 得到分数<br>
+        4. 按分数从小到大排序，前 N 名即为中奖者<br>
+        5. 与公示结果比对，完全一致则验证通过<br><br>
+        <strong>或者：</strong>点击下方"生成独立验证页"，得到一个自包含 HTML 文件，浏览器打开即可一键验证。
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-secondary" id="btnBack4">← 返回</button>
+      <button class="btn btn-primary" id="btnExport">📦 生成独立公示页</button>
+      <button class="btn btn-secondary" id="btnCopyResults">📋 复制公示文本</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    转发抽奖工具 · 本地运行 · 无数据上传 · 算法公开可验证
+  </div>
+
+</div>
+
+<script>
+// ==================== State ====================
+const state = {
+  participants: [],     // deduplicated, sorted
+  rawInput: '',
+  winnerCount: 1,
+  seedType: 'lottery',
+  seedValue: '',
+  commitmentHash: '',
+  winners: [],           // [{name, score}]
+  drawDone: false,
+};
+
+// ==================== DOM refs ====================
+const $ = id => document.getElementById(id);
+
+// ==================== Step navigation ====================
+function goToStep(n) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  $(`step${n}`).classList.add('active');
+  document.querySelectorAll('.step-tab').forEach(t => {
+    const s = +t.dataset.step;
+    t.classList.toggle('active', s === n);
+    t.classList.toggle('done', s < n);
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+document.querySelectorAll('.step-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const n = +tab.dataset.step;
+    if (n <= 1 || state.participants.length > 0) goToStep(n);
+  });
+});
+
+// ==================== Step 1: Input ====================
+
+// Method tabs
+document.querySelectorAll('.method-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.method-panel').forEach(p => p.classList.remove('active'));
+    $(`method-${tab.dataset.method}`).classList.add('active');
+  });
+});
+
+// Parse input
+function parseInput(text) {
+  if (!text.trim()) return [];
+  // Support: newline, comma, Chinese comma, tab, semicolon
+  let names = text.split(/[\n,，;\t]+/).map(s => s.trim()).filter(Boolean);
+  // Deduplicate (case-sensitive)
+  return [...new Set(names)];
+}
+
+function updatePreview() {
+  const text = $('pasteInput').value;
+  const raw = text.split(/[\n,，;\t]+/).map(s => s.trim()).filter(Boolean);
+  const unique = [...new Set(raw)];
+
+  if (raw.length === 0) {
+    $('previewCard').style.display = 'none';
+    $('btnNext1').disabled = true;
+    return;
+  }
+
+  $('previewCard').style.display = 'block';
+  $('totalCount').textContent = raw.length;
+  $('uniqueCount').textContent = unique.length;
+  $('dupCount').textContent = raw.length - unique.length;
+
+  const sorted = [...unique].sort();
+  $('participantPreview').textContent = sorted.join('、');
+
+  state.participants = sorted;
+  state.rawInput = text;
+  $('btnNext1').disabled = unique.length === 0;
+}
+
+$('pasteInput').addEventListener('input', updatePreview);
+
+// File upload
+const uploadZone = $('uploadZone');
+const fileInput = $('fileInput');
+
+uploadZone.addEventListener('click', () => fileInput.click());
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) handleFile(fileInput.files[0]);
+});
+
+function handleFile(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target.result;
+    let names;
+    if (file.name.endsWith('.json')) {
+      try {
+        const data = JSON.parse(text);
+        if (Array.isArray(data)) {
+          names = data.map(d => typeof d === 'string' ? d : (d.screen_name || d.name || d.user || ''));
+        } else if (data.reposts) {
+          names = data.reposts.map(d => d.screen_name || d.name || d.user || '');
+        } else {
+          names = [String(text)];
+        }
+      } catch { names = [text]; }
+      $('pasteInput').value = names.filter(Boolean).join('\n');
+    } else {
+      $('pasteInput').value = text;
+    }
+    // Switch to paste tab
+    document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector('.method-tab[data-method="paste"]').classList.add('active');
+    document.querySelectorAll('.method-panel').forEach(p => p.classList.remove('active'));
+    $('method-paste').classList.add('active');
+    updatePreview();
+  };
+  reader.readAsText(file);
+}
+
+// Fetch attempt (limited - CORS will likely block this from browser)
+$('btnFetch').addEventListener('click', async () => {
+  const url = $('weiboUrl').value.trim();
+  if (!url) return alert('请输入微博链接或 ID');
+
+  let postId = url;
+  const match = url.match(/status\/(\d+)/);
+  if (match) postId = match[1];
+
+  try {
+    $('btnFetch').textContent = '抓取中...';
+    $('btnFetch').disabled = true;
+
+    const resp = await fetch(`https://m.weibo.cn/api/statuses/repost?id=${postId}&page=1`, {
+      credentials: 'omit',
+      headers: { 'Accept': 'application/json' }
+    });
+
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+
+    if (data.data && data.data.reposts) {
+      const names = data.data.reposts.map(r => r.user?.screen_name).filter(Boolean);
+      $('pasteInput').value = names.join('\n');
+      updatePreview();
+      alert(`第一页抓取到 ${names.length} 位转发用户，如需更多请使用 Python 脚本`);
+    } else {
+      throw new Error('无数据');
+    }
+  } catch (e) {
+    alert('浏览器直接抓取失败（跨域限制），请使用 Python 辅助脚本 fetch_reposts.py');
+  } finally {
+    $('btnFetch').textContent = '尝试抓取';
+    $('btnFetch').disabled = false;
+  }
+});
+
+// Next buttons
+$('btnNext1').addEventListener('click', () => goToStep(2));
+
+// ==================== Step 2: Settings ====================
+
+$('winnerCount').addEventListener('input', validateStep2);
+
+// Seed type selection
+document.querySelectorAll('.seed-option').forEach(opt => {
+  opt.addEventListener('click', () => {
+    document.querySelectorAll('.seed-option').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    state.seedType = opt.dataset.seed;
+    document.querySelectorAll('.seed-detail').forEach(d => d.classList.add('hidden'));
+    $(`seedDetail-${opt.dataset.seed}`).classList.remove('hidden');
+    validateStep2();
+  });
+});
+
+function getSeedValue() {
+  switch (state.seedType) {
+    case 'lottery': return $('lotteryInfo').value.trim();
+    case 'bitcoin': return ($('bitcoinHash').value.trim() || $('bitcoinHeight').value.trim());
+    case 'custom': return $('customSeed').value.trim();
+    default: return '';
+  }
+}
+
+function validateStep2() {
+  const count = parseInt($('winnerCount').value) || 0;
+  const seed = getSeedValue();
+  const valid = count > 0 && count <= state.participants.length && seed.length > 0;
+  $('btnNext2').disabled = !valid;
+}
+
+['lotteryInfo', 'bitcoinHeight', 'bitcoinHash', 'customSeed'].forEach(id => {
+  $(id).addEventListener('input', validateStep2);
+});
+
+// Commitment hash
+$('btnCommit').addEventListener('click', async () => {
+  const data = state.participants.join(',');
+  const hash = await sha256(data);
+  state.commitmentHash = hash;
+  $('commitHash').textContent = hash;
+  $('commitResult').classList.remove('hidden');
+});
+
+$('btnBack2').addEventListener('click', () => goToStep(1));
+$('btnNext2').addEventListener('click', () => {
+  state.winnerCount = parseInt($('winnerCount').value) || 1;
+  state.seedValue = getSeedValue();
+  goToStep(3);
+});
+
+// ==================== Step 3: Draw ====================
+
+$('btnDraw').addEventListener('click', executeDraw);
+$('btnBack3').addEventListener('click', () => goToStep(2));
+$('btnNext3').addEventListener('click', () => {
+  buildResultsPage();
+  goToStep(4);
+});
+
+async function executeDraw() {
+  $('btnDraw').disabled = true;
+  $('winnersCard').classList.add('hidden');
+  $('drawNav').classList.add('hidden');
+
+  const names = state.participants;
+  const seed = state.seedValue;
+  const listHash = await sha256(names.join(','));
+  const count = state.winnerCount;
+
+  // Compute scores
+  const scored = [];
+  for (const name of names) {
+    const score = await sha256(`${seed}:${name}:${listHash}`);
+    scored.push({ name, score });
+  }
+  scored.sort((a, b) => a.score.localeCompare(b.score));
+  state.winners = scored.slice(0, count);
+
+  // Animation
+  await animateDraw(names, count, scored);
+
+  // Show winners
+  const list = $('winnerList');
+  list.innerHTML = '';
+  state.winners.forEach((w, i) => {
+    const div = document.createElement('div');
+    div.className = 'winner-item';
+    div.innerHTML = `
+      <div class="winner-rank">${i + 1}</div>
+      <div class="winner-name">${escHtml(w.name)}</div>
+      <div class="winner-score">${w.score.slice(0, 16)}…</div>
+    `;
+    list.appendChild(div);
+  });
+
+  $('winnersCard').classList.remove('hidden');
+  $('drawNav').classList.remove('hidden');
+  state.drawDone = true;
+}
+
+async function animateDraw(names, count, scored) {
+  const drawNames = $('drawNames');
+  const drawLabel = $('drawLabel');
+  const drawCounter = $('drawCounter');
+
+  drawLabel.textContent = '抽取中…';
+  drawCounter.textContent = '';
+
+  // Rapid name cycling animation
+  const duration = 3000;
+  const start = Date.now();
+  let frameCount = 0;
+
+  return new Promise(resolve => {
+    function frame() {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out: slow down at the end
+      const interval = 40 + progress * 300;
+
+      // Show random names
+      const randomName = names[Math.floor(Math.random() * names.length)];
+      drawNames.textContent = randomName;
+
+      if (progress < 1) {
+        setTimeout(frame, interval);
+      } else {
+        // Reveal winners one by one
+        revealWinners(scored.slice(0, count), 0, drawNames, drawLabel, drawCounter, resolve);
+      }
+    }
+    frame();
+  });
+}
+
+function revealWinners(winners, index, drawNames, drawLabel, drawCounter, resolve) {
+  if (index >= winners.length) {
+    drawLabel.textContent = '抽奖完成！';
+    drawNames.textContent = '';
+    drawCounter.textContent = `🎉 ${winners.length} 位中奖者`;
+    resolve();
+    return;
+  }
+
+  drawNames.textContent = winners[index].name;
+  drawNames.style.color = '#4ade80';
+  drawLabel.textContent = `第 ${index + 1} 位中奖者`;
+
+  setTimeout(() => {
+    drawNames.style.color = '';
+    revealWinners(winners, index + 1, drawNames, drawLabel, drawCounter, resolve);
+  }, 800);
+}
+
+// ==================== Step 4: Results ====================
+
+$('btnBack4').addEventListener('click', () => goToStep(3));
+
+$('btnExport').addEventListener('click', () => {
+  const html = generateStandalonePage();
+  downloadFile(`抽奖公示_${new Date().toISOString().slice(0,10)}.html`, html, 'text/html');
+});
+
+$('btnCopyResults').addEventListener('click', () => {
+  const text = buildResultsText();
+  navigator.clipboard.writeText(text).then(() => {
+    alert('公示文本已复制到剪贴板');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('公示文本已复制到剪贴板');
+  });
+});
+
+function buildResultsPage() {
+  // Info
+  $('verifyInfo').innerHTML = `
+    <span class="label">抽奖时间</span> ${new Date().toLocaleString('zh-CN')}<br>
+    <span class="label">参与人数</span> ${state.participants.length}<br>
+    <span class="label">中奖人数</span> ${state.winnerCount}<br>
+    <span class="label">种子来源</span> ${seedTypeLabel(state.seedType)}<br>
+    <span class="label">种子值</span> ${escHtml(state.seedValue)}<br>
+    ${state.commitmentHash ? `<span class="label">名单承诺</span> ${state.commitmentHash}<br>` : ''}
+  `;
+
+  // Verification data
+  const listHash = sha256Sync(state.participants.join(','));  // we'll compute async below
+  $('verifyData').innerHTML = `<span class="label">名单哈希 (SHA-256)</span><br><span id="listHashVal">计算中…</span>`;
+
+  sha256(state.participants.join(',')).then(hash => {
+    $('listHashVal').textContent = hash;
+    // Also add winner verification
+    let html = `<span class="label">名单哈希 (SHA-256)</span><br>${hash}<br><br>`;
+    html += `<span class="label">中奖者及分数</span><br>`;
+    state.winners.forEach((w, i) => {
+      html += `${i + 1}. ${escHtml(w.name)} → ${w.score}<br>`;
+    });
+    $('verifyData').innerHTML = html;
+  });
+
+  // Participants
+  $('verifyParticipants').textContent = state.participants.join('、');
+}
+
+function buildResultsText() {
+  let text = `【转发抽奖公示】\n`;
+  text += `抽奖时间：${new Date().toLocaleString('zh-CN')}\n`;
+  text += `参与人数：${state.participants.length}\n`;
+  text += `中奖人数：${state.winnerCount}\n`;
+  text += `种子来源：${seedTypeLabel(state.seedType)}\n`;
+  text += `种子值：${state.seedValue}\n`;
+  if (state.commitmentHash) text += `名单承诺哈希：${state.commitmentHash}\n`;
+  text += `\n【中奖名单】\n`;
+  state.winners.forEach((w, i) => {
+    text += `${i + 1}. ${w.name}\n`;
+  });
+  text += `\n【验证方法】\n`;
+  text += `1. 将参与者名单按 Unicode 升序排列\n`;
+  text += `2. 计算 SHA-256(名单.join(",")) 得名单哈希\n`;
+  text += `3. 对每个参与者计算 SHA-256(种子+":"+用户名+":"+名单哈希) 得分数\n`;
+  text += `4. 按分数升序排列，前${state.winnerCount}名为中奖者\n`;
+  text += `\n完整参与者名单：${state.participants.join('、')}`;
+  return text;
+}
+
+function generateStandalonePage() {
+  const participants = state.participants;
+  const winners = state.winners;
+  const seed = state.seedValue;
+  const seedType = state.seedType;
+  const winnerCount = state.winnerCount;
+  const commitmentHash = state.commitmentHash;
+  const timestamp = new Date().toLocaleString('zh-CN');
+
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>转发抽奖公示</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; max-width: 680px; margin: 0 auto; padding: 32px 16px; background: #fafafa; color: #333; line-height: 1.7; }
+  h1 { font-size: 22px; border-bottom: 2px solid #7c83f5; padding-bottom: 8px; }
+  h2 { font-size: 17px; margin-top: 28px; color: #555; }
+  .card { background: #fff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 20px; margin: 16px 0; }
+  .winner { font-size: 16px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+  .winner:last-child { border-bottom: none; }
+  .rank { display: inline-block; width: 28px; height: 28px; line-height: 28px; text-align: center; background: #7c83f5; color: #fff; border-radius: 50%; font-size: 13px; font-weight: 700; margin-right: 10px; }
+  .hash { font-family: "SF Mono", "Fira Code", monospace; font-size: 12px; color: #888; word-break: break-all; background: #f5f5f5; padding: 12px; border-radius: 4px; margin: 8px 0; }
+  .btn { display: inline-block; padding: 10px 20px; background: #7c83f5; color: #fff; border: none; border-radius: 6px; font-size: 14px; cursor: pointer; margin: 8px 4px 0 0; }
+  .btn:hover { background: #5c62d0; }
+  .result { padding: 12px; border-radius: 6px; margin-top: 12px; font-weight: 600; }
+  .pass { background: #e8f8f0; color: #2d8c5a; }
+  .fail { background: #fde8e8; color: #c03030; }
+  #participants { max-height: 200px; overflow-y: auto; font-size: 13px; color: #666; }
+</style>
+</head>
+<body>
+<h1>🎲 转发抽奖公示</h1>
+
+<div class="card">
+  <h2>基本信息</h2>
+  <p><strong>抽奖时间：</strong>${timestamp}</p>
+  <p><strong>参与人数：</strong>${participants.length}</p>
+  <p><strong>中奖人数：</strong>${winnerCount}</p>
+  <p><strong>种子来源：</strong>${seedTypeLabel(seedType)}</p>
+  <p><strong>种子值：</strong>${escHtml(seed)}</p>
+  ${commitmentHash ? `<p><strong>名单承诺哈希：</strong></p><div class="hash">${commitmentHash}</div>` : ''}
+</div>
+
+<div class="card">
+  <h2>🎉 中奖名单</h2>
+  ${winners.map((w, i) => `<div class="winner"><span class="rank">${i+1}</span><strong>${escHtml(w.name)}</strong></div>`).join('')}
+</div>
+
+<div class="card">
+  <h2>验证数据</h2>
+  <p><strong>完整参与者名单哈希：</strong></p>
+  <div class="hash" id="listHash">计算中…</div>
+  <p style="margin-top:12px;"><strong>中奖者分数：</strong></p>
+  ${winners.map((w, i) => `<div style="font-size:13px;margin:4px 0;">${i+1}. ${escHtml(w.name)} → <span style="font-family:monospace;color:#888;">${w.score}</span></div>`).join('')}
+</div>
+
+<div class="card">
+  <h2>完整参与者名单</h2>
+  <div id="participants">${participants.map(p => escHtml(p)).join('、')}</div>
+</div>
+
+<div class="card">
+  <h2>一键验证</h2>
+  <p style="font-size:13px;color:#666;">点击下方按钮，自动使用相同算法验证结果是否一致</p>
+  <button class="btn" onclick="verify()">🔍 验证结果</button>
+  <div id="verifyResult"></div>
+</div>
+
+<div class="card">
+  <h2>验证方法（手动）</h2>
+  <p style="font-size:13px;color:#666;">
+    1. 获取参与者名单，按 Unicode 码点升序排列<br>
+    2. 计算 SHA-256(名单.join(",")) 得名单哈希<br>
+    3. 对每个参与者计算 SHA-256(种子 + ":" + 用户名 + ":" + 名单哈希)<br>
+    4. 按哈希值升序排序，前 ${winnerCount} 名即为中奖者<br>
+    5. 与公示结果比对，完全一致则验证通过
+  </p>
+</div>
+
+<script>
+const participants = ${JSON.stringify(participants)};
+const seed = ${JSON.stringify(seed)};
+const expectedWinners = ${JSON.stringify(winners.map(w => w.name))};
+const winnerCount = ${winnerCount};
+
+async function sha256(str) {
+  const buf = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function verify() {
+  const resultDiv = document.getElementById('verifyResult');
+  resultDiv.innerHTML = '<p>验证中…</p>';
+
+  try {
+    const listHash = await sha256(participants.join(','));
+    document.getElementById('listHash').textContent = listHash;
+
+    const scored = [];
+    for (const name of participants) {
+      const score = await sha256(seed + ':' + name + ':' + listHash);
+      scored.push({ name, score });
+    }
+    scored.sort((a, b) => a.score.localeCompare(b.score));
+    const actualWinners = scored.slice(0, winnerCount).map(w => w.name);
+
+    const pass = JSON.stringify(actualWinners) === JSON.stringify(expectedWinners);
+
+    resultDiv.innerHTML = '<div class="result ' + (pass ? 'pass' : 'fail') + '">' +
+      (pass ? '✅ 验证通过！抽奖结果与算法计算完全一致' : '❌ 验证失败！结果与算法计算不一致') +
+      '</div>';
+  } catch (e) {
+    resultDiv.innerHTML = '<div class="result fail">验证出错: ' + e.message + '</div>';
+  }
+}
+
+// Auto-compute list hash on load
+sha256(participants.join(',')).then(h => {
+  document.getElementById('listHash').textContent = h;
+});
+<\/script>
+</body>
+</html>`;
+}
+
+// ==================== Helpers ====================
+
+async function sha256(str) {
+  const buf = new TextEncoder().encode(str);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function sha256Sync(str) {
+  // Just a placeholder - real computation is async
+  return '(async computed)';
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function seedTypeLabel(type) {
+  switch (type) {
+    case 'lottery': return '公开彩票开奖号码';
+    case 'bitcoin': return '比特币区块哈希';
+    case 'custom': return '自定义种子';
+    default: return type;
+  }
+}
+
+function copyText(elemId) {
+  const text = $(elemId).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    // Brief visual feedback
+  });
+}
+
+function downloadFile(name, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+</script>
+</body>
+</html>
