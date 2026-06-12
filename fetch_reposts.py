@@ -45,10 +45,19 @@ _ssl_ctx = ssl.create_default_context()
 _ssl_ctx.check_hostname = False
 _ssl_ctx.verify_mode = ssl.CERT_NONE
 
-API_URL = "https://m.weibo.cn/api/statuses/repost"
+API_URL = "https://m.weibo.cn/api/statuses/repostTimeline"
 
 # Cookie 缓存文件：输入过一次就记住，下次不用再粘贴
 COOKIE_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".weibo_cookie")
+
+
+def _extract_xsrf(cookie):
+    """从 Cookie 字符串中提取 XSRF-TOKEN 值"""
+    for part in cookie.split(";"):
+        part = part.strip()
+        if part.startswith("XSRF-TOKEN="):
+            return part.split("=", 1)[1]
+    return ""
 
 
 def load_cookie():
@@ -103,9 +112,10 @@ def resolve_post_id(post_id, cookie):
     url = f"https://m.weibo.cn/api/statuses/show?id={post_id}"
     req = Request(url)
     req.add_header("Cookie", cookie)
-    req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+    req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
     req.add_header("Referer", f"https://m.weibo.cn/status/{post_id}")
     req.add_header("X-Requested-With", "XMLHttpRequest")
+    req.add_header("X-XSRF-TOKEN", _extract_xsrf(cookie))
 
     try:
         with urlopen(req, timeout=10, context=_ssl_ctx) as resp:
@@ -135,9 +145,10 @@ def fetch_reposts(post_id, cookie, max_pages=200, verbose=False):
         url = f"{API_URL}?id={post_id}&page={page}"
         req = Request(url)
         req.add_header("Cookie", cookie)
-        req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+        req.add_header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36")
         req.add_header("Referer", f"https://m.weibo.cn/status/{post_id}")
         req.add_header("X-Requested-With", "XMLHttpRequest")
+        req.add_header("X-XSRF-TOKEN", _extract_xsrf(cookie))
 
         try:
             with urlopen(req, timeout=10, context=_ssl_ctx) as resp:
@@ -172,7 +183,7 @@ def fetch_reposts(post_id, cookie, max_pages=200, verbose=False):
                 print(f"⚠️  第 {page} 页无数据，可能已到末尾")
             break
 
-        reposts = data.get("data", {}).get("reposts", [])
+        reposts = data.get("data", {}).get("data", [])
         if not reposts:
             if verbose:
                 print(f"📄 第 {page} 页: 无转发，已到末尾")
