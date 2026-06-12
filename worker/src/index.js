@@ -35,7 +35,7 @@ const ALLOWED_ORIGINS = [
   'null', // local file
 ];
 
-const corsHeaders = {
+const BASE_CORS = {
   'Access-Control-Allow-Origin': 'https://weibo-lottery.pages.dev',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
@@ -47,8 +47,8 @@ export default {
     // Dynamic CORS origin
     const origin = request.headers.get('Origin') || '';
     const corsHeaders = {
-      ...corsHeaders,
-      'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : corsHeaders['Access-Control-Allow-Origin'],
+      ...BASE_CORS,
+      'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : BASE_CORS['Access-Control-Allow-Origin'],
     };
 
     // CORS preflight
