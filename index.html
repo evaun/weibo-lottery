@@ -199,20 +199,13 @@
   .cookie-guide-text kbd { background: var(--card2); padding: 1px 6px; border-radius: 4px; font-size: 12px; border: 1px solid var(--border); }
   .cookie-guide-divider { height: 1px; background: var(--border); margin: 8px 0; }
 
-  /* Bookmarklet */
+  /* Cookie extract zone */
   .bookmarklet-zone {
     background: var(--bg); border: 1px solid var(--accent);
     border-radius: 10px; padding: 20px; text-align: center;
     margin-bottom: 16px;
   }
   .bookmarklet-zone p { font-size: 13px; color: var(--text2); margin-bottom: 12px; }
-  .bookmarklet-link {
-    display: inline-block; padding: 10px 24px;
-    background: var(--accent); color: #000; font-weight: 700;
-    border-radius: 8px; text-decoration: none; font-size: 14px;
-    cursor: grab; user-select: none;
-  }
-  .bookmarklet-link:hover { background: #9da3ff; }
 
   /* Share link */
   .share-url-box {
@@ -367,11 +360,11 @@
           用 Python 脚本自动抓取微博转发用户，或用书签小工具一键提取 Cookie。
         </div>
 
-        <!-- Bookmarklet -->
+        <!-- 一键提取 Cookie -->
         <div class="bookmarklet-zone">
-          <p><strong>最快方式：</strong>把下方按钮拖到书签栏，在 m.weibo.cn 页面点击即可复制 Cookie</p>
-          <a class="bookmarklet-link" id="bookmarkletLink" href="javascript:void(function(){if(location.hostname!=='m.weibo.cn'){alert('请先打开 m.weibo.cn 并登录微博');return}var c=document.cookie;if(!c){alert('未找到Cookie，请确保已登录微博');return}navigator.clipboard.writeText(c).then(function(){var d=document.createElement('div');d.textContent='✅ Cookie已复制！回到抽奖工具粘贴即可';d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:%234ade80;color:%23000;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:700;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.3)';document.body.appendChild(d);setTimeout(function(){d.remove()},3000)})}).call(this)">🎲 提取微博Cookie</a>
-          <p style="font-size:11px;margin-top:10px;color:var(--text2);">拖拽此按钮到书签栏 → 打开 m.weibo.cn → 点击书签 → Cookie 自动复制</p>
+          <p style="margin-bottom:12px"><strong>最快方式：</strong>复制下方代码 → 打开 m.weibo.cn → F12 → Console → 粘贴运行 → Cookie 自动复制</p>
+          <div style="position:relative;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;color:var(--text2);word-break:break-all;line-height:1.5;max-height:80px;overflow-y:auto;user-select:all" id="cookieCodeBlock">void(function(){if(location.hostname!=='m.weibo.cn'){alert('请先打开 m.weibo.cn 并登录微博');return}var c=document.cookie;if(!c){alert('未找到Cookie，请确保已登录微博');return}navigator.clipboard.writeText(c).then(function(){var d=document.createElement('div');d.textContent='✅ Cookie已复制！回到抽奖工具粘贴即可';d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#4ade80;color:#000;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:700;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.3)';document.body.appendChild(d);setTimeout(function(){d.remove()},3000)})}).call(this)</div>
+          <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="navigator.clipboard.writeText(document.getElementById('cookieCodeBlock').textContent).then(function(){this.textContent='✅ 已复制';setTimeout(function(){this.textContent='📋 复制代码'}.bind(this),1500)}.bind(this))">📋 复制代码</button>
         </div>
 
         <label>微博帖子链接或 ID</label>
