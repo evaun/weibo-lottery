@@ -33,11 +33,17 @@
 
 import json
 import os
+import ssl
 import sys
 import time
 import argparse
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
+
+# macOS Python 常见 SSL 证书问题，跳过验证（仅影响本脚本的微博请求）
+_ssl_ctx = ssl.create_default_context()
+_ssl_ctx.check_hostname = False
+_ssl_ctx.verify_mode = ssl.CERT_NONE
 
 API_URL = "https://m.weibo.cn/api/statuses/repost"
 
@@ -103,7 +109,7 @@ def fetch_reposts(post_id, cookie, max_pages=200, verbose=False):
         req.add_header("X-Requested-With", "XMLHttpRequest")
 
         try:
-            with urlopen(req, timeout=10) as resp:
+            with urlopen(req, timeout=10, context=_ssl_ctx) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
         except HTTPError as e:
             if e.code == 403:
