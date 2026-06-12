@@ -873,7 +873,7 @@ $('btnFetch').addEventListener('click', async () => {
     $('fetchStatus').textContent = `正在抓取第 ${page} 页… 已获取 ${allUsers.size} 人`;
 
     try {
-      const resp = await fetch('/api/fetch-reposts', {
+      const resp = await fetch('https://weibo-lottery-api.evaun0203.workers.dev/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cookie, post_id: postId, page }),
