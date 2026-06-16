@@ -602,7 +602,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v1.5 · 算法公开可验证<br>
+    微博抽奖工具 v1.6 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 
@@ -643,7 +643,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v1.5 · 算法公开可验证<br>
+    微博抽奖工具 v1.6 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 </div>
@@ -853,6 +853,41 @@ function handleFile(file) {
 }
 
 // Fetch reposts via serverless proxy (no Python needed!)
+
+// 从各种微博链接格式中提取帖子 ID
+// 支持：
+//   https://weibo.com/7494874950/R1EWklu6X?pagetype=detail   → R1EWklu6X
+//   https://m.weibo.cn/status/5012345678901234               → 5012345678901234
+//   https://m.weibo.cn/detail/5012345678901234               → 5012345678901234
+//   https://weibo.com/detail/5012345678901234                → 5012345678901234
+//   直接粘贴 ID：R1EWklu6X 或 5012345678901234
+function parseWeiboId(input) {
+  let s = (input || '').trim();
+  if (!s) return '';
+  // 去掉 query / hash
+  s = s.split('?')[0].split('#')[0];
+
+  // m.weibo.cn/status/xxx 或 /detail/xxx
+  let m = s.match(/(?:status|detail)\/(\w+)/);
+  if (m) return m[1];
+
+  // weibo.com/{uid}/{bid}  —— 取路径最后一段
+  m = s.match(/weibo\.(?:com|cn)\/(?:u\/)?\d+\/(\w+)/);
+  if (m) return m[1];
+
+  // weibo.com/{bid} 单段（少见）
+  m = s.match(/weibo\.(?:com|cn)\/(\w+)\/?$/);
+  if (m && m[1] !== 'detail' && m[1] !== 'status') return m[1];
+
+  // 兜底：本身就是纯 ID（数字或 base62 短码）
+  if (/^[A-Za-z0-9]+$/.test(s)) return s;
+
+  // 最后兜底：取最后一段非空路径
+  const parts = s.replace(/\/+$/, '').split('/');
+  const last = parts[parts.length - 1];
+  return /^[A-Za-z0-9]+$/.test(last) ? last : '';
+}
+
 $('btnFetch').addEventListener('click', async () => {
   const url = $('weiboUrl').value.trim();
   const cookie = $('cookieInput').value.trim();
@@ -860,9 +895,8 @@ $('btnFetch').addEventListener('click', async () => {
   if (!url) return alert('请输入微博帖子链接或 ID');
   if (!cookie) return alert('请粘贴你的微博 Cookie');
 
-  let postId = url;
-  const match = url.match(/status\/(\w+)/);
-  if (match) postId = match[1];
+  let postId = parseWeiboId(url);
+  if (!postId) return alert('无法识别帖子 ID，请检查链接格式');
 
   // Save cookie to localStorage
   localStorage.setItem('weibo_lottery_cookie', cookie);

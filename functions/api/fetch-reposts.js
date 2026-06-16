@@ -96,6 +96,17 @@ export async function onRequestPost(context) {
 
     // 3) 提取用户名
     const reposts = data?.data?.data || [];
+
+    // 微博接口层错误（如 ok:0 / 错误码），透传给前端便于诊断
+    if (reposts.length === 0 && data && data.ok !== undefined && data.ok !== 1) {
+      return new Response(JSON.stringify({
+        ok: false,
+        msg: '微博接口返回：' + (data.msg || JSON.stringify(data).slice(0, 120)),
+        weiboOk: data.ok,
+        numericId,
+      }), { headers: corsHeaders });
+    }
+
     const users = [];
     const seen = new Set();
     for (const r of reposts) {
