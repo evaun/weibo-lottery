@@ -1,0 +1,21 @@
+{
+  "routes": [
+    {
+      "routePath": "/api/fetch-reposts",
+      "mountPath": "/api",
+      "method": "OPTIONS",
+      "module": [
+        "api/fetch-reposts.js:onRequestOptions"
+      ]
+    },
+    {
+      "routePath": "/api/fetch-reposts",
+      "mountPath": "/api",
+      "method": "POST",
+      "module": [
+        "api/fetch-reposts.js:onRequestPost"
+      ]
+    }
+  ],
+  "baseURL": "/"
+}

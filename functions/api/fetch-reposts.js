@@ -99,9 +99,19 @@ export async function onRequestPost(context) {
 
     // 微博接口层错误（如 ok:0 / 错误码），透传给前端便于诊断
     if (reposts.length === 0 && data && data.ok !== undefined && data.ok !== 1) {
+      // ok:-100 或跳转登录页 = Cookie 未登录/失效
+      const raw = JSON.stringify(data);
+      const isLogin = data.ok === -100 || /passport\.weibo|sso\/signin|login/i.test(raw);
+      if (isLogin) {
+        return new Response(JSON.stringify({
+          ok: false,
+          code: 403,
+          msg: 'Cookie 未登录或已失效。请确认：① Cookie 必须从手机版 m.weibo.cn 复制（不是电脑版 weibo.com）；② 复制前已在 m.weibo.cn 登录；③ Cookie 没有过期。请重新获取 Cookie 后再试。',
+        }), { headers: corsHeaders });
+      }
       return new Response(JSON.stringify({
         ok: false,
-        msg: '微博接口返回：' + (data.msg || JSON.stringify(data).slice(0, 120)),
+        msg: '微博接口返回：' + (data.msg || raw.slice(0, 120)),
         weiboOk: data.ok,
         numericId,
       }), { headers: corsHeaders });
