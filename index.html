@@ -359,53 +359,41 @@
         <div class="method-tab" data-method="paste">📝 粘贴名单</div>
       </div>
 
-      <!-- Fetch (now first) — 全网页端，无需安装 Python -->
+      <!-- Fetch (now first) — 浏览器端直抓，绕开云端IP风控 -->
       <div class="method-panel active" id="method-fetch">
         <div class="callout callout-info">
-          在网页上直接抓取微博转发用户，无需安装任何软件。只需粘贴你的微博 Cookie 和帖子 ID 即可。
+          在你自己的浏览器里直接抓取，<strong>不经过任何服务器</strong>，用你本人的登录态和网络，成功率最高。整个过程 3 步。
         </div>
 
-        <!-- 第一步：获取 Cookie -->
-        <label>第一步：获取 Cookie</label>
+        <!-- 步骤1：打开微博帖子 -->
+        <label>第一步：打开要抽奖的微博帖子</label>
+        <p style="font-size:12px;color:var(--text2);margin:4px 0 8px">
+          在浏览器里打开并登录微博，进入那条微博的<strong>转发列表页面</strong>。推荐用手机版地址（转发列表更全）：<br>
+          <code style="font-size:11px">https://m.weibo.cn/status/帖子ID</code> →（页面里点「转发」Tab，让它显示转发列表）
+        </p>
+
+        <!-- 步骤2：复制脚本 -->
+        <label style="margin-top:12px">第二步：复制下方脚本，在那个微博页面运行</label>
         <div class="bookmarklet-zone">
-          <p style="margin-bottom:8px;font-size:12px;color:var(--text2)">方式 A（推荐）：复制下方代码 → 打开微博（<code>weibo.com</code> 电脑版或 <code>m.weibo.cn</code> 手机版均可，需已登录）→ F12 → Console → 粘贴运行</p>
           <div class="callout callout-warn" style="margin-bottom:10px;font-size:12px;padding:10px 14px;">
-            ⚠️ <strong>首次粘贴时</strong>，Chrome 会提示 <code>Warning: Don't paste code…</code>，这是安全提示。请先在控制台输入 <code>allow pasting</code> 并按回车，然后才能粘贴代码。
+            ⚠️ 在微博页面按 <kbd>F12</kbd> → 切到 <strong>Console</strong> 标签。首次粘贴时 Chrome 会提示 <code>Warning: Don't paste code…</code>，请先输入 <code>allow pasting</code> 按回车，再粘贴下方脚本运行。
           </div>
-          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:10px;color:var(--text2);word-break:break-all;line-height:1.5;max-height:60px;overflow-y:auto;user-select:all" id="cookieCodeBlock">void(function(){if(!/weibo\.(com|cn)$/.test(location.hostname)){alert('请先打开 weibo.com 或 m.weibo.cn 并登录微博');return}var c=document.cookie;if(!c){alert('未找到Cookie，请确保已登录微博');return}var t=document.createElement('textarea');t.value=c;t.style.cssText='position:fixed;left:-9999px';document.body.appendChild(t);t.select();try{document.execCommand('copy');var d=document.createElement('div');d.textContent='✅ Cookie已复制！回到抽奖工具粘贴即可';d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#4ade80;color:#000;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:700;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.3)';document.body.appendChild(d);setTimeout(function(){d.remove()},3000)}catch(e){prompt('自动复制失败，请手动复制下方Cookie：',c)}t.remove()}).call(this)</div>
-          <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="navigator.clipboard.writeText(document.getElementById('cookieCodeBlock').textContent).then(function(){this.textContent='✅ 已复制';setTimeout(function(){this.textContent='📋 复制代码'}.bind(this),1500)}.bind(this))">📋 复制代码</button>
-          <p style="margin-top:8px;font-size:11px;color:var(--text2)">方式 B：手动获取 → <a href="javascript:void(0)" onclick="document.getElementById('cookieManualGuide').style.display=document.getElementById('cookieManualGuide').style.display==='none'?'block':'none'" style="color:var(--accent);text-decoration:underline">展开教程</a></p>
-          <div id="cookieManualGuide" style="display:none;margin-top:8px">
-            <div class="cookie-guide">
-              <div class="cookie-guide-step"><div class="cookie-guide-num">1</div><div class="cookie-guide-text">Chrome 打开 <code>m.weibo.cn</code> 并登录</div></div>
-              <div class="cookie-guide-step"><div class="cookie-guide-num">2</div><div class="cookie-guide-text">按 <kbd>F12</kbd> → 点「Network」标签 → 刷新页面</div></div>
-              <div class="cookie-guide-step"><div class="cookie-guide-num">3</div><div class="cookie-guide-text">点左侧任意请求名 → 右侧 Headers → Request Headers → 复制 <code>cookie:</code> 值</div></div>
-            </div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:10px;color:var(--text2);word-break:break-all;line-height:1.5;max-height:90px;overflow-y:auto;user-select:all" id="scrapeCodeBlock"></div>
+          <button class="btn btn-primary btn-sm" style="margin-top:8px" id="btnCopyScrape">📋 复制抓取脚本</button>
+          <p style="margin-top:8px;font-size:11px;color:var(--text2)">脚本会自动翻页抓取全部转发用户，完成后把名单复制到你的剪贴板，并显示绿色提示。</p>
+        </div>
+
+        <!-- 步骤3：粘贴结果 -->
+        <label style="margin-top:12px">第三步：把抓到的名单粘贴到这里</label>
+        <textarea id="pasteInput" placeholder="脚本运行完成后，名单已在剪贴板中，直接在这里 Ctrl/Cmd+V 粘贴即可。每行一个用户名，自动去重。"></textarea>
+        <p style="font-size:12px;color:var(--text2);margin-top:8px;">同一用户多次转发只计一次，自动去重</p>
+
+        <details style="margin-top:14px;font-size:12px;color:var(--text2)">
+          <summary style="cursor:pointer">为什么不能填 Cookie 一键抓取？</summary>
+          <div style="margin-top:8px;line-height:1.7">
+            微博对登录态有 IP 风控：Cookie 在国内登录，但云端服务器是海外 IP，微博会判定为异地风险、强制重新登录（错误码 -100），所以「填 Cookie 让服务器抓」的方式在国内不可用。让脚本在你自己的浏览器里跑，用的就是你本人的 IP 和登录态，不会触发风控。
           </div>
-        </div>
-
-        <label>粘贴 Cookie</label>
-        <textarea id="cookieInput" rows="3" placeholder="粘贴你从 m.weibo.cn 获取的 Cookie，以 SUB= 开头的那一整段" style="font-size:12px;min-height:80px"></textarea>
-
-        <!-- 第二步：输入帖子 ID -->
-        <label style="margin-top:12px">第二步：输入微博帖子链接或 ID</label>
-        <input type="text" id="weiboUrl" placeholder="https://m.weibo.cn/status/5123456789012345 或纯数字 ID">
-
-        <!-- 抓取按钮 + 进度 -->
-        <div class="btn-group">
-          <button class="btn btn-primary" id="btnFetch">🔄 开始抓取</button>
-        </div>
-        <div id="fetchProgress" style="display:none;margin-top:16px">
-          <div style="background:var(--bg);border-radius:6px;height:6px;overflow:hidden;margin-bottom:8px">
-            <div id="fetchProgressBar" style="height:100%;background:var(--accent);border-radius:6px;width:0%;transition:width .3s"></div>
-          </div>
-          <p id="fetchStatus" style="font-size:13px;color:var(--text2)">正在抓取…</p>
-        </div>
-
-        <div style="margin-top:16px;font-size:11px;color:var(--text2)">
-          💡 Cookie 仅用于本次抓取请求，不会存储在我们的服务器上<br>
-          💾 Cookie 会自动保存在你浏览器的 localStorage 中，下次无需重新输入
-        </div>
+        </details>
       </div>
 
       <!-- Upload (now second) -->
@@ -421,7 +409,7 @@
       <!-- Paste (now third) -->
       <div class="method-panel" id="method-paste">
         <label>粘贴参与者名单</label>
-        <textarea id="pasteInput" placeholder="每行一个用户名，支持以下格式：&#10;&#10;用户A&#10;用户B&#10;用户C&#10;&#10;或用逗号/顿号分隔：&#10;用户A，用户B，用户C"></textarea>
+        <textarea id="pasteInput2" placeholder="每行一个用户名，支持以下格式：&#10;&#10;用户A&#10;用户B&#10;用户C&#10;&#10;或用逗号/顿号分隔：&#10;用户A，用户B，用户C"></textarea>
         <p style="font-size:12px;color:var(--text2);margin-top:8px;">同一用户多次转发只计一次，自动去重</p>
       </div>
     </div>
@@ -602,7 +590,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v1.9 · 算法公开可验证<br>
+    微博抽奖工具 v2.0 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 
@@ -643,7 +631,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v1.9 · 算法公开可验证<br>
+    微博抽奖工具 v2.0 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 </div>
@@ -770,6 +758,7 @@ document.querySelectorAll('.method-tab').forEach(tab => {
     tab.classList.add('active');
     document.querySelectorAll('.method-panel').forEach(p => p.classList.remove('active'));
     $(`method-${tab.dataset.method}`).classList.add('active');
+    updatePreview();
   });
 });
 
@@ -780,8 +769,18 @@ function parseInput(text) {
   return [...new Set(names)];
 }
 
+// 取当前生效的名单文本：抓取面板用 #pasteInput，粘贴面板用 #pasteInput2
+function getActiveListText() {
+  const fetchActive = $('method-fetch')?.classList.contains('active');
+  const pasteActive = $('method-paste')?.classList.contains('active');
+  if (pasteActive) return $('pasteInput2').value;
+  if (fetchActive) return $('pasteInput').value;
+  // 兜底：哪个有内容用哪个
+  return $('pasteInput').value || $('pasteInput2').value || '';
+}
+
 function updatePreview() {
-  const text = $('pasteInput').value;
+  const text = getActiveListText();
   const raw = text.split(/[\n,，;\t]+/).map(s => s.trim()).filter(Boolean);
   const unique = [...new Set(raw)];
 
@@ -805,6 +804,7 @@ function updatePreview() {
 }
 
 $('pasteInput').addEventListener('input', updatePreview);
+$('pasteInput2').addEventListener('input', updatePreview);
 
 // File upload
 const uploadZone = $('uploadZone');
@@ -838,9 +838,9 @@ function handleFile(file) {
           names = [String(text)];
         }
       } catch { names = [text]; }
-      $('pasteInput').value = names.filter(Boolean).join('\n');
+      $('pasteInput2').value = names.filter(Boolean).join('\n');
     } else {
-      $('pasteInput').value = text;
+      $('pasteInput2').value = text;
     }
     // Switch to paste tab
     document.querySelectorAll('.method-tab').forEach(t => t.classList.remove('active'));
@@ -852,149 +852,85 @@ function handleFile(file) {
   reader.readAsText(file);
 }
 
-// Fetch reposts via serverless proxy (no Python needed!)
-
-// 从各种微博链接格式中提取帖子 ID
-// 支持：
-//   https://weibo.com/7494874950/R1EWklu6X?pagetype=detail   → R1EWklu6X
-//   https://m.weibo.cn/status/5012345678901234               → 5012345678901234
-//   https://m.weibo.cn/detail/5012345678901234               → 5012345678901234
-//   https://weibo.com/detail/5012345678901234                → 5012345678901234
-//   直接粘贴 ID：R1EWklu6X 或 5012345678901234
-function parseWeiboId(input) {
-  let s = (input || '').trim();
-  if (!s) return '';
-  // 去掉 query / hash
-  s = s.split('?')[0].split('#')[0];
-
-  // m.weibo.cn/status/xxx 或 /detail/xxx
-  let m = s.match(/(?:status|detail)\/(\w+)/);
-  if (m) return m[1];
-
-  // weibo.com/{uid}/{bid}  —— 取路径最后一段
-  m = s.match(/weibo\.(?:com|cn)\/(?:u\/)?\d+\/(\w+)/);
-  if (m) return m[1];
-
-  // weibo.com/{bid} 单段（少见）
-  m = s.match(/weibo\.(?:com|cn)\/(\w+)\/?$/);
-  if (m && m[1] !== 'detail' && m[1] !== 'status') return m[1];
-
-  // 兜底：本身就是纯 ID（数字或 base62 短码）
-  if (/^[A-Za-z0-9]+$/.test(s)) return s;
-
-  // 最后兜底：取最后一段非空路径
-  const parts = s.replace(/\/+$/, '').split('/');
-  const last = parts[parts.length - 1];
-  return /^[A-Za-z0-9]+$/.test(last) ? last : '';
-}
-
-// 从 PC 链接 weibo.com/{uid}/{bid} 中额外提取 uid（用于构造 PC Referer，提高成功率）
-function parseWeiboUid(input) {
-  const s = (input || '').trim().split('?')[0].split('#')[0];
-  const m = s.match(/weibo\.(?:com|cn)\/(?:u\/)?(\d{6,})\/\w+/);
-  return m ? m[1] : '';
-}
-
-$('btnFetch').addEventListener('click', async () => {
-  const url = $('weiboUrl').value.trim();
-  const cookie = $('cookieInput').value.trim();
-
-  if (!url) return alert('请输入微博帖子链接或 ID');
-  if (!cookie) return alert('请粘贴你的微博 Cookie');
-
-  let postId = parseWeiboId(url);
-  if (!postId) return alert('无法识别帖子 ID，请检查链接格式');
-  const uid = parseWeiboUid(url);
-  const bid = /^[A-Za-z0-9]+$/.test(postId) && !/^\d+$/.test(postId) ? postId : '';
-
-  // Save cookie to localStorage
-  localStorage.setItem('weibo_lottery_cookie', cookie);
-
-  const allUsers = new Set();
-  let page = 1;
-  let hasMore = true;
-  let numericId = null;
-  let platform = null; // 探测到的可用平台，后续页沿用，避免每页重复探测
-  let errorMsg = '';
-
-  $('btnFetch').disabled = true;
-  $('btnFetch').textContent = '抓取中…';
-  $('fetchProgress').style.display = 'block';
-  $('fetchProgressBar').style.width = '5%';
-  $('fetchStatus').textContent = '正在连接…';
-
-  while (hasMore) {
-    $('fetchStatus').textContent = `正在抓取第 ${page} 页… 已获取 ${allUsers.size} 人`;
-
-    try {
-      const resp = await fetch('/api/fetch-reposts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cookie, post_id: postId, page, uid, bid, platform }),
-      });
-
-      const data = await resp.json();
-
-      if (!data.ok) {
-        errorMsg = data.msg || '未知错误';
-        if (data.code === 403) {
-          localStorage.removeItem('weibo_lottery_cookie');
-          errorMsg = data.msg || 'Cookie已过期，请重新获取';
-        }
-        if (data._debug) {
-          window._fetchDebug = data._debug;
-          console.log('[抓取诊断]', data._debug);
-        }
-        break;
-      }
-
-      if (data.numericId && !numericId) numericId = data.numericId;
-      if (data.platform && !platform) platform = data.platform; // 锁定平台
-
-      data.users.forEach(u => allUsers.add(u));
-
-      if (!data.hasMore || data.users.length === 0) {
-        hasMore = false;
-      } else {
-        page++;
-        // Progress bar estimate
-        const pct = Math.min(90, 5 + page * 5);
-        $('fetchProgressBar').style.width = pct + '%';
-        // Throttle: 1.2s between pages
-        await new Promise(r => setTimeout(r, 1200));
-      }
-    } catch (e) {
-      errorMsg = '网络错误：' + e.message;
-      break;
-    }
+// ==================== 浏览器端抓取脚本（在微博页面运行，绕开云端IP风控） ====================
+// 该脚本字符串会注入到「复制抓取脚本」按钮，用户在 m.weibo.cn 的 Console 运行
+const SCRAPE_SCRIPT = `void(async function(){
+  if(!/weibo\\.(com|cn)$/.test(location.hostname)){alert('请在微博页面运行：先打开 m.weibo.cn 并进入要抽奖的那条微博');return;}
+  function toast(msg,color){var d=document.createElement('div');d.textContent=msg;d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:'+(color||'#7c83f5')+';color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;z-index:999999;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:80vw;text-align:center';d.id='wb-scrape-toast';var old=document.getElementById('wb-scrape-toast');if(old)old.remove();document.body.appendChild(d);return d;}
+  function getMid(){
+    var m=location.pathname.match(/(?:status|detail)\\/(\\w+)/);if(m)return m[1];
+    m=location.pathname.match(/\\/\\d+\\/(\\w+)/);if(m)return m[1];
+    var mm=(location.href.match(/[?&](?:id|mid|weibo_id)=(\\w+)/));if(mm)return mm[1];
+    return prompt('未能从地址识别帖子ID，请手动粘贴帖子ID（数字或短码）：')||'';
   }
-
-  $('fetchProgressBar').style.width = '100%';
-  $('btnFetch').disabled = false;
-  $('btnFetch').textContent = '🔄 开始抓取';
-
-  if (allUsers.size > 0) {
-    // Populate the participant list
-    window._participants = [...allUsers];
-    $('pasteInput').value = [...allUsers].join('\n');
-    updatePreview();
-    $('fetchStatus').innerHTML = `<span style="color:var(--success)">✅ 抓取完成！共 <strong>${allUsers.size}</strong> 位转发用户</span>`;
-    // Auto-scroll to preview
-    $('previewCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  } else {
-    let dbgHtml = '';
-    if (window._fetchDebug) {
-      const d = window._fetchDebug;
-      dbgHtml = `<details style="margin-top:10px;font-size:11px;color:var(--text2)"><summary style="cursor:pointer">🔍 诊断信息（出问题时发给开发者）</summary><div style="margin-top:6px;font-family:monospace;word-break:break-all;background:var(--card2);padding:8px;border-radius:6px;line-height:1.5"><div><strong>帖子ID:</strong> ${d.mid || '-'}</div><div style="margin-top:4px"><strong>PC返回:</strong> ${escHtml(d.pc || '-')}</div><div style="margin-top:4px"><strong>手机返回:</strong> ${escHtml(d.mobile || '-')}</div></div></details>`;
-    }
-    $('fetchStatus').innerHTML = `<span style="color:#f87171">❌ ${escHtml(errorMsg || '未抓取到任何转发用户')}</span>${dbgHtml}`;
+  var pid=getMid();
+  if(!pid){alert('没有帖子ID，无法抓取');return;}
+  var t=toast('开始抓取，请勿关闭页面…');
+  var names=[];var seen={};var page=1;var empty=0;var mid=pid;
+  // 短码→数字ID（用本页登录态请求，同域无风控）
+  if(!/^\\d+$/.test(pid)){
+    try{var sr=await fetch('https://m.weibo.cn/api/statuses/show?id='+encodeURIComponent(pid),{headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'include'});var sd=await sr.json();if(sd&&sd.id)mid=String(sd.id);}catch(e){}
   }
-});
+  while(page<=200){
+    t.textContent='抓取中… 第'+page+'页，已获取 '+names.length+' 人';
+    var data=null;
+    try{
+      var r=await fetch('https://m.weibo.cn/api/statuses/repostTimeline?id='+mid+'&page='+page,{headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'include'});
+      data=await r.json();
+    }catch(e){t.textContent='第'+page+'页请求失败，重试…';await new Promise(function(s){setTimeout(s,1500)});continue;}
+    if(!data||data.ok!==1){
+      if(data&&data.ok===-100){toast('登录态失效，请刷新微博页面重新登录后再运行','#e24b4a');return;}
+      empty++; if(empty>=2)break; await new Promise(function(s){setTimeout(s,800)}); page++; continue;
+    }
+    var list=(data.data&&data.data.data)||[];
+    if(list.length===0){empty++; if(empty>=2)break;}else{empty=0;}
+    list.forEach(function(it){var n=it.user&&(it.user.screen_name||it.user.name);if(n&&!seen[n]){seen[n]=1;names.push(n);}});
+    page++;
+    await new Promise(function(s){setTimeout(s,700)});
+  }
+  if(names.length===0){toast('未抓到任何转发用户，请确认这条微博有转发且你已登录','#e24b4a');return;}
+  var text=names.join('\\n');
+  var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();
+  var ok=false;try{ok=document.execCommand('copy');}catch(e){}
+  ta.remove();
+  if(ok){toast('✅ 抓取完成！共 '+names.length+' 人，已复制到剪贴板，回到抽奖工具粘贴','#22c55e');}
+  else{toast('抓到 '+names.length+' 人，但自动复制失败，请在弹窗中手动复制','#f59e0b');setTimeout(function(){prompt('请手动复制下方名单：',text);},500);}
+  console.log('[微博抽奖] 共抓取 '+names.length+' 位转发用户');
+}).call(this)`;
 
-// Restore saved cookie on page load
+// 注入脚本到代码块 + 复制按钮
 (function() {
-  const saved = localStorage.getItem('weibo_lottery_cookie');
-  if (saved) $('cookieInput').value = saved;
+  const block = $('scrapeCodeBlock');
+  if (block) block.textContent = SCRAPE_SCRIPT;
+  const btn = $('btnCopyScrape');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const copy = () => {
+        const ta = document.createElement('textarea');
+        ta.value = SCRAPE_SCRIPT;
+        ta.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        let ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) {}
+        ta.remove();
+        return ok;
+      };
+      let done = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(SCRAPE_SCRIPT).then(() => {
+          btn.textContent = '✅ 已复制脚本';
+          setTimeout(() => { btn.textContent = '📋 复制抓取脚本'; }, 1800);
+        }).catch(() => {
+          if (copy()) { btn.textContent = '✅ 已复制脚本'; setTimeout(() => { btn.textContent = '📋 复制抓取脚本'; }, 1800); }
+        });
+        done = true;
+      }
+      if (!done) {
+        if (copy()) { btn.textContent = '✅ 已复制脚本'; setTimeout(() => { btn.textContent = '📋 复制抓取脚本'; }, 1800); }
+      }
+    });
+  }
 })();
 
 $('btnNext1').addEventListener('click', () => goToStep(2));
