@@ -590,7 +590,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v2.1 · 算法公开可验证<br>
+    微博抽奖工具 v2.2 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 
@@ -631,7 +631,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v2.1 · 算法公开可验证<br>
+    微博抽奖工具 v2.2 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 </div>
@@ -900,11 +900,30 @@ const SCRAPE_SCRIPT = `void(async function(){
   }
   if(names.length===0){toast('未抓到任何转发用户，请确认这条微博有转发且你已登录','#e24b4a');return;}
   var text=names.join('\\n');
-  var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();
-  var ok=false;try{ok=document.execCommand('copy');}catch(e){}
-  ta.remove();
-  if(ok){toast('✅ 抓取完成！共 '+names.length+' 人，已复制到剪贴板，回到抽奖工具粘贴','#22c55e');}
-  else{toast('抓到 '+names.length+' 人，但自动复制失败，请在弹窗中手动复制','#f59e0b');setTimeout(function(){prompt('请手动复制下方名单：',text);},500);}
+  // 先尝试自动复制（多数情况下失败，因焦点不在页面，故同时提供面板兜底）
+  var auto=false;
+  try{var ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();auto=document.execCommand('copy');ta.remove();}catch(e){}
+  // 始终弹出结果面板：内含完整名单文本框 + 一键复制 + 下载txt（点击是真实手势，复制必成）
+  var old=document.getElementById('wb-result-panel');if(old)old.remove();
+  var mask=document.createElement('div');mask.id='wb-result-panel';
+  mask.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000000;display:flex;align-items:center;justify-content:center';
+  var box=document.createElement('div');
+  box.style.cssText='background:#fff;color:#222;width:min(560px,92vw);max-height:84vh;border-radius:14px;padding:20px;box-shadow:0 12px 40px rgba(0,0,0,.4);display:flex;flex-direction:column;font-family:-apple-system,BlinkMacSystemFont,sans-serif';
+  var h=document.createElement('div');h.textContent='✅ 抓取完成，共 '+names.length+' 人';h.style.cssText='font-size:17px;font-weight:800;margin-bottom:6px;color:#16a34a';
+  var tip=document.createElement('div');tip.textContent='点「复制名单」即可（此处点击是有效操作，能成功复制）。也可「下载 txt」后在抽奖工具导入。';tip.style.cssText='font-size:12px;color:#666;margin-bottom:12px;line-height:1.6';
+  var area=document.createElement('textarea');area.value=text;area.readOnly=true;area.style.cssText='width:100%;flex:1;min-height:200px;font-size:12px;font-family:monospace;border:1px solid #ddd;border-radius:8px;padding:10px;resize:vertical;color:#333;background:#fafafa';
+  var row=document.createElement('div');row.style.cssText='display:flex;gap:10px;margin-top:14px;flex-wrap:wrap';
+  function mkBtn(txt,bg){var b=document.createElement('button');b.textContent=txt;b.style.cssText='flex:1;min-width:120px;padding:12px;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;background:'+bg+';color:#fff';return b;}
+  var bCopy=mkBtn(auto?'✅ 已自动复制（可再点一次）':'📋 复制名单','#7c83f5');
+  var bDl=mkBtn('💾 下载 txt','#0ea5e9');
+  var bClose=mkBtn('关闭','#9ca3af');
+  bCopy.onclick=function(){area.focus();area.select();var ok=false;try{ok=document.execCommand('copy');}catch(e){}
+    if(!ok&&navigator.clipboard){navigator.clipboard.writeText(text).then(function(){bCopy.textContent='✅ 已复制！';},function(){bCopy.textContent='复制失败，请手动选中';});return;}
+    bCopy.textContent=ok?'✅ 已复制！回到工具粘贴':'复制失败，请手动选中全部';};
+  bDl.onclick=function(){var blob=new Blob([text],{type:'text/plain;charset=utf-8'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='weibo_reposts_'+names.length+'人.txt';document.body.appendChild(a);a.click();a.remove();bDl.textContent='✅ 已下载';};
+  bClose.onclick=function(){mask.remove();};
+  row.appendChild(bCopy);row.appendChild(bDl);row.appendChild(bClose);
+  box.appendChild(h);box.appendChild(tip);box.appendChild(area);box.appendChild(row);mask.appendChild(box);document.body.appendChild(mask);
   console.log('[微博抽奖] 共抓取 '+names.length+' 位转发用户');
 }).call(this)`;
 
