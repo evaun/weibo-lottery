@@ -368,8 +368,8 @@
         <!-- 步骤1：打开微博帖子 -->
         <label>第一步：打开要抽奖的微博帖子</label>
         <p style="font-size:12px;color:var(--text2);margin:4px 0 8px">
-          在浏览器里打开并登录微博，进入那条微博的<strong>转发列表页面</strong>。推荐用手机版地址（转发列表更全）：<br>
-          <code style="font-size:11px">https://m.weibo.cn/status/帖子ID</code> →（页面里点「转发」Tab，让它显示转发列表）
+          在浏览器登录微博，进入那条微博的<strong>转发列表页面</strong>。<strong>电脑版（weibo.com）或手机版（m.weibo.cn）都可以</strong>，脚本会自动识别。<br>
+          打开后请点开「转发」让页面显示转发列表，再运行脚本。
         </p>
 
         <!-- 步骤2：复制脚本 -->
@@ -391,7 +391,7 @@
         <details style="margin-top:14px;font-size:12px;color:var(--text2)">
           <summary style="cursor:pointer">为什么不能填 Cookie 一键抓取？</summary>
           <div style="margin-top:8px;line-height:1.7">
-            微博对登录态有 IP 风控：Cookie 在国内登录，但云端服务器是海外 IP，微博会判定为异地风险、强制重新登录（错误码 -100），所以「填 Cookie 让服务器抓」的方式在国内不可用。让脚本在你自己的浏览器里跑，用的就是你本人的 IP 和登录态，不会触发风控。
+            微博对登录态有 IP 风控：Cookie 在国内登录，但云端服务器是海外 IP，微博会判定为异地风险、强制重新登录（错误码 -100），所以「填 Cookie 让服务器抓」的方式在国内不可用。让脚本在你自己的浏览器里跑，用的就是你本人的 IP 和登录态，不会触发风控。脚本会自动判断你在电脑版还是手机版，调用对应接口，两边都能抓。
           </div>
         </details>
       </div>
@@ -590,7 +590,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v2.0 · 算法公开可验证<br>
+    微博抽奖工具 v2.1 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 
@@ -631,7 +631,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v2.0 · 算法公开可验证<br>
+    微博抽奖工具 v2.1 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 </div>
@@ -853,37 +853,47 @@ function handleFile(file) {
 }
 
 // ==================== 浏览器端抓取脚本（在微博页面运行，绕开云端IP风控） ====================
-// 该脚本字符串会注入到「复制抓取脚本」按钮，用户在 m.weibo.cn 的 Console 运行
+// 自动识别当前站点：在 weibo.com 用 PC 同源接口，在 m.weibo.cn 用手机同源接口
+// 用户在 PC 或手机版任意微博页面的 Console 运行均可
 const SCRAPE_SCRIPT = `void(async function(){
-  if(!/weibo\\.(com|cn)$/.test(location.hostname)){alert('请在微博页面运行：先打开 m.weibo.cn 并进入要抽奖的那条微博');return;}
+  var host=location.hostname;
+  if(!/weibo\\.(com|cn)$/.test(host)){alert('请在微博页面运行：先打开 weibo.com 或 m.weibo.cn 并进入要抽奖的那条微博');return;}
+  var isPC=/(^|\\.)weibo\\.com$/.test(host);
   function toast(msg,color){var d=document.createElement('div');d.textContent=msg;d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:'+(color||'#7c83f5')+';color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;z-index:999999;box-shadow:0 4px 20px rgba(0,0,0,.3);max-width:80vw;text-align:center';d.id='wb-scrape-toast';var old=document.getElementById('wb-scrape-toast');if(old)old.remove();document.body.appendChild(d);return d;}
-  function getMid(){
+  function getId(){
     var m=location.pathname.match(/(?:status|detail)\\/(\\w+)/);if(m)return m[1];
+    m=location.pathname.match(/weibo\\.(?:com|cn)\\/(?:u\\/)?\\d+\\/(\\w+)/);if(m)return m[1];
     m=location.pathname.match(/\\/\\d+\\/(\\w+)/);if(m)return m[1];
     var mm=(location.href.match(/[?&](?:id|mid|weibo_id)=(\\w+)/));if(mm)return mm[1];
     return prompt('未能从地址识别帖子ID，请手动粘贴帖子ID（数字或短码）：')||'';
   }
-  var pid=getMid();
+  function getJSON(u){return fetch(u,{headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'include'}).then(function(r){return r.json();});}
+  var pid=getId();
   if(!pid){alert('没有帖子ID，无法抓取');return;}
-  var t=toast('开始抓取，请勿关闭页面…');
+  var t=toast('开始抓取（'+(isPC?'PC版':'手机版')+'），请勿关闭页面…');
   var names=[];var seen={};var page=1;var empty=0;var mid=pid;
-  // 短码→数字ID（用本页登录态请求，同域无风控）
+  // 短码→数字ID（同源接口，无风控）
   if(!/^\\d+$/.test(pid)){
-    try{var sr=await fetch('https://m.weibo.cn/api/statuses/show?id='+encodeURIComponent(pid),{headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'include'});var sd=await sr.json();if(sd&&sd.id)mid=String(sd.id);}catch(e){}
+    try{
+      if(isPC){var sd=await getJSON('https://weibo.com/ajax/statuses/show?id='+encodeURIComponent(pid));if(sd&&(sd.idstr||sd.id))mid=String(sd.idstr||sd.id);}
+      else{var sm=await getJSON('https://m.weibo.cn/api/statuses/show?id='+encodeURIComponent(pid));if(sm&&sm.id)mid=String(sm.id);}
+    }catch(e){}
   }
-  while(page<=200){
-    t.textContent='抓取中… 第'+page+'页，已获取 '+names.length+' 人';
+  while(page<=300){
+    t.textContent='抓取中（'+(isPC?'PC':'手机')+'）… 第'+page+'页，已获取 '+names.length+' 人';
     var data=null;
     try{
-      var r=await fetch('https://m.weibo.cn/api/statuses/repostTimeline?id='+mid+'&page='+page,{headers:{'X-Requested-With':'XMLHttpRequest'},credentials:'include'});
-      data=await r.json();
+      if(isPC){data=await getJSON('https://weibo.com/ajax/statuses/repostTimeline?id='+mid+'&page='+page+'&moduleID=feed&count=20');}
+      else{data=await getJSON('https://m.weibo.cn/api/statuses/repostTimeline?id='+mid+'&page='+page);}
     }catch(e){t.textContent='第'+page+'页请求失败，重试…';await new Promise(function(s){setTimeout(s,1500)});continue;}
-    if(!data||data.ok!==1){
-      if(data&&data.ok===-100){toast('登录态失效，请刷新微博页面重新登录后再运行','#e24b4a');return;}
-      empty++; if(empty>=2)break; await new Promise(function(s){setTimeout(s,800)}); page++; continue;
-    }
-    var list=(data.data&&data.data.data)||[];
-    if(list.length===0){empty++; if(empty>=2)break;}else{empty=0;}
+    // 登录失效判断
+    if(data&&data.ok===-100){toast('登录态失效，请刷新微博页面重新登录后再运行','#e24b4a');return;}
+    // 取列表：PC 是 data.data(数组)，手机是 data.data.data
+    var list=null;
+    if(isPC){list=Array.isArray(data&&data.data)?data.data:(Array.isArray(data&&data.data&&data.data.data)?data.data.data:null);}
+    else{list=(data&&data.data&&data.data.data)||null;}
+    if(!Array.isArray(list)){empty++;if(empty>=2)break;await new Promise(function(s){setTimeout(s,800)});page++;continue;}
+    if(list.length===0){empty++;if(empty>=2)break;}else{empty=0;}
     list.forEach(function(it){var n=it.user&&(it.user.screen_name||it.user.name);if(n&&!seen[n]){seen[n]=1;names.push(n);}});
     page++;
     await new Promise(function(s){setTimeout(s,700)});
