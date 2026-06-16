@@ -602,7 +602,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v1.8 · 算法公开可验证<br>
+    微博抽奖工具 v1.9 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 
@@ -643,7 +643,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v1.8 · 算法公开可验证<br>
+    微博抽奖工具 v1.9 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 </div>
@@ -941,6 +941,10 @@ $('btnFetch').addEventListener('click', async () => {
           localStorage.removeItem('weibo_lottery_cookie');
           errorMsg = data.msg || 'Cookie已过期，请重新获取';
         }
+        if (data._debug) {
+          window._fetchDebug = data._debug;
+          console.log('[抓取诊断]', data._debug);
+        }
         break;
       }
 
@@ -978,7 +982,12 @@ $('btnFetch').addEventListener('click', async () => {
     // Auto-scroll to preview
     $('previewCard')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } else {
-    $('fetchStatus').innerHTML = `<span style="color:#f87171">❌ ${errorMsg || '未抓取到任何转发用户'}</span>`;
+    let dbgHtml = '';
+    if (window._fetchDebug) {
+      const d = window._fetchDebug;
+      dbgHtml = `<details style="margin-top:10px;font-size:11px;color:var(--text2)"><summary style="cursor:pointer">🔍 诊断信息（出问题时发给开发者）</summary><div style="margin-top:6px;font-family:monospace;word-break:break-all;background:var(--card2);padding:8px;border-radius:6px;line-height:1.5"><div><strong>帖子ID:</strong> ${d.mid || '-'}</div><div style="margin-top:4px"><strong>PC返回:</strong> ${escHtml(d.pc || '-')}</div><div style="margin-top:4px"><strong>手机返回:</strong> ${escHtml(d.mobile || '-')}</div></div></details>`;
+    }
+    $('fetchStatus').innerHTML = `<span style="color:#f87171">❌ ${escHtml(errorMsg || '未抓取到任何转发用户')}</span>${dbgHtml}`;
   }
 });
 

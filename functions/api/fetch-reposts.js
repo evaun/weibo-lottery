@@ -77,8 +77,10 @@ function extractUsers(list) {
 async function fetchPC(cookie, mid, page, uid, bid) {
   const url = `https://weibo.com/ajax/statuses/repostTimeline?id=${mid}&page=${page}&moduleID=feed&count=20`;
   const resp = await fetch(url, { headers: pcHeaders(cookie, uid, bid) });
+  const text = await resp.text();
   let data;
-  try { data = await resp.json(); } catch { return { list: null, raw: null }; }
+  try { data = JSON.parse(text); }
+  catch { return { list: null, raw: { _status: resp.status, _nonjson: text.slice(0, 200) } }; }
   let list = null;
   if (Array.isArray(data?.data)) list = data.data;
   else if (Array.isArray(data?.data?.data)) list = data.data.data;
@@ -90,9 +92,10 @@ async function fetchPC(cookie, mid, page, uid, bid) {
 async function fetchMobile(cookie, mid, page) {
   const url = `https://m.weibo.cn/api/statuses/repostTimeline?id=${mid}&page=${page}`;
   const resp = await fetch(url, { headers: mobileHeaders(cookie, mid) });
-  if (resp.status === 403) return { list: null, status: 403, raw: null };
+  const text = await resp.text();
   let data;
-  try { data = await resp.json(); } catch { return { list: null, raw: null }; }
+  try { data = JSON.parse(text); }
+  catch { return { list: null, raw: { _status: resp.status, _nonjson: text.slice(0, 200) } }; }
   const list = Array.isArray(data?.data?.data) ? data.data.data : null;
   const total = data?.data?.total ?? 0;
   return { list, total, raw: data };
@@ -103,6 +106,17 @@ function isLoginError(raw) {
   if (raw.ok === -100) return true;
   const s = JSON.stringify(raw);
   return /passport\.weibo|sso\/signin|未登录|login/i.test(s);
+}
+
+// 截取原始返回的关键信息，用于前端诊断
+function snippet(raw) {
+  if (raw === null || raw === undefined) return '无响应';
+  try {
+    const s = typeof raw === 'string' ? raw : JSON.stringify(raw);
+    return s.slice(0, 200);
+  } catch {
+    return String(raw).slice(0, 200);
+  }
 }
 
 export async function onRequestOptions() {
@@ -141,18 +155,19 @@ export async function onRequestPost(context) {
 
     // 2) 抓取一页 —— 已知平台则只跑该平台，否则 PC→手机 自动探测
     let result, used, lastRaw = null;
+    let pcRaw = null, mobileRaw = null;
 
     if (platform === 'pc') {
-      result = await fetchPC(cookie, numericId, pageNum, uid, bid); used = 'pc'; lastRaw = result.raw;
+      result = await fetchPC(cookie, numericId, pageNum, uid, bid); used = 'pc'; lastRaw = result.raw; pcRaw = result.raw;
     } else if (platform === 'mobile') {
-      result = await fetchMobile(cookie, numericId, pageNum); used = 'mobile'; lastRaw = result.raw;
+      result = await fetchMobile(cookie, numericId, pageNum); used = 'mobile'; lastRaw = result.raw; mobileRaw = result.raw;
     } else {
       // 自动探测：先 PC（用户多用电脑版 Cookie），失败再手机
-      result = await fetchPC(cookie, numericId, pageNum, uid, bid); used = 'pc'; lastRaw = result.raw;
+      result = await fetchPC(cookie, numericId, pageNum, uid, bid); used = 'pc'; lastRaw = result.raw; pcRaw = result.raw;
       if (!Array.isArray(result.list)) {
         const m = await fetchMobile(cookie, numericId, pageNum);
-        lastRaw = m.raw || lastRaw;
-        if (Array.isArray(m.list)) { result = m; used = 'mobile'; }
+        mobileRaw = m.raw;
+        if (Array.isArray(m.list)) { result = m; used = 'mobile'; lastRaw = m.raw; }
       }
     }
 
@@ -170,19 +185,26 @@ export async function onRequestPost(context) {
       }), { headers: corsHeaders });
     }
 
-    // 4) 失败：判断是否登录问题
-    if (isLoginError(lastRaw)) {
+    // 4) 失败：PC 是否登录问题（PC Cookie 是主路径，以 PC 结果为准判断）
+    const pcLogin = isLoginError(pcRaw);
+    const mobileLogin = isLoginError(mobileRaw);
+
+    // 仅当 PC 也判定为登录失败时，才提示重新登录（避免被手机回退误导）
+    if (pcLogin || (platform === 'mobile' && mobileLogin)) {
       return new Response(JSON.stringify({
         ok: false,
         code: 403,
-        msg: 'Cookie 未登录或已失效。请重新登录微博（电脑版 weibo.com 或手机版 m.weibo.cn 均可），再用复制代码重新获取 Cookie。注意：复制时所在的网站，要和你登录的是同一个。',
+        msg: 'Cookie 未登录或已失效。请重新登录微博后，用复制代码重新获取 Cookie。',
+        _debug: { pc: snippet(pcRaw), mobile: snippet(mobileRaw), mid: numericId },
       }), { headers: corsHeaders });
     }
 
+    // 其它失败：把 PC + 手机的原始返回都带回，便于诊断
     return new Response(JSON.stringify({
       ok: false,
-      msg: '未获取到转发数据。微博返回：' + (lastRaw ? JSON.stringify(lastRaw).slice(0, 150) : '空响应'),
+      msg: '未获取到转发数据（诊断信息见下）。PC：' + snippet(pcRaw) + ' ｜ 手机：' + snippet(mobileRaw),
       numericId,
+      _debug: { pc: snippet(pcRaw), mobile: snippet(mobileRaw), mid: numericId },
     }), { headers: corsHeaders });
 
   } catch (e) {
