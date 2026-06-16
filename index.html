@@ -368,11 +368,11 @@
         <!-- 第一步：获取 Cookie -->
         <label>第一步：获取 Cookie</label>
         <div class="bookmarklet-zone">
-          <p style="margin-bottom:8px;font-size:12px;color:var(--text2)">方式 A（推荐）：复制下方代码 → 打开 m.weibo.cn → F12 → Console → 粘贴运行</p>
+          <p style="margin-bottom:8px;font-size:12px;color:var(--text2)">方式 A（推荐）：复制下方代码 → 打开微博（<code>weibo.com</code> 电脑版或 <code>m.weibo.cn</code> 手机版均可，需已登录）→ F12 → Console → 粘贴运行</p>
           <div class="callout callout-warn" style="margin-bottom:10px;font-size:12px;padding:10px 14px;">
             ⚠️ <strong>首次粘贴时</strong>，Chrome 会提示 <code>Warning: Don't paste code…</code>，这是安全提示。请先在控制台输入 <code>allow pasting</code> 并按回车，然后才能粘贴代码。
           </div>
-          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:10px;color:var(--text2);word-break:break-all;line-height:1.5;max-height:60px;overflow-y:auto;user-select:all" id="cookieCodeBlock">void(function(){if(location.hostname!=='m.weibo.cn'){alert('请先打开 m.weibo.cn 并登录微博');return}var c=document.cookie;if(!c){alert('未找到Cookie，请确保已登录微博');return}var t=document.createElement('textarea');t.value=c;t.style.cssText='position:fixed;left:-9999px';document.body.appendChild(t);t.select();try{document.execCommand('copy');var d=document.createElement('div');d.textContent='✅ Cookie已复制！回到抽奖工具粘贴即可';d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#4ade80;color:#000;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:700;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.3)';document.body.appendChild(d);setTimeout(function(){d.remove()},3000)}catch(e){prompt('自动复制失败，请手动复制下方Cookie：',c)}t.remove()}).call(this)</div>
+          <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-family:monospace;font-size:10px;color:var(--text2);word-break:break-all;line-height:1.5;max-height:60px;overflow-y:auto;user-select:all" id="cookieCodeBlock">void(function(){if(!/weibo\.(com|cn)$/.test(location.hostname)){alert('请先打开 weibo.com 或 m.weibo.cn 并登录微博');return}var c=document.cookie;if(!c){alert('未找到Cookie，请确保已登录微博');return}var t=document.createElement('textarea');t.value=c;t.style.cssText='position:fixed;left:-9999px';document.body.appendChild(t);t.select();try{document.execCommand('copy');var d=document.createElement('div');d.textContent='✅ Cookie已复制！回到抽奖工具粘贴即可';d.style.cssText='position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#4ade80;color:#000;padding:14px 28px;border-radius:10px;font-size:15px;font-weight:700;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.3)';document.body.appendChild(d);setTimeout(function(){d.remove()},3000)}catch(e){prompt('自动复制失败，请手动复制下方Cookie：',c)}t.remove()}).call(this)</div>
           <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="navigator.clipboard.writeText(document.getElementById('cookieCodeBlock').textContent).then(function(){this.textContent='✅ 已复制';setTimeout(function(){this.textContent='📋 复制代码'}.bind(this),1500)}.bind(this))">📋 复制代码</button>
           <p style="margin-top:8px;font-size:11px;color:var(--text2)">方式 B：手动获取 → <a href="javascript:void(0)" onclick="document.getElementById('cookieManualGuide').style.display=document.getElementById('cookieManualGuide').style.display==='none'?'block':'none'" style="color:var(--accent);text-decoration:underline">展开教程</a></p>
           <div id="cookieManualGuide" style="display:none;margin-top:8px">
@@ -602,7 +602,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v1.7 · 算法公开可验证<br>
+    微博抽奖工具 v1.8 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 
@@ -643,7 +643,7 @@
   </div>
 
   <div class="footer">
-    微博抽奖工具 v1.7 · 算法公开可验证<br>
+    微博抽奖工具 v1.8 · 算法公开可验证<br>
     <span style="opacity:.6">Developed by Zacky Zhang, IGN China</span>
   </div>
 </div>
@@ -888,6 +888,13 @@ function parseWeiboId(input) {
   return /^[A-Za-z0-9]+$/.test(last) ? last : '';
 }
 
+// 从 PC 链接 weibo.com/{uid}/{bid} 中额外提取 uid（用于构造 PC Referer，提高成功率）
+function parseWeiboUid(input) {
+  const s = (input || '').trim().split('?')[0].split('#')[0];
+  const m = s.match(/weibo\.(?:com|cn)\/(?:u\/)?(\d{6,})\/\w+/);
+  return m ? m[1] : '';
+}
+
 $('btnFetch').addEventListener('click', async () => {
   const url = $('weiboUrl').value.trim();
   const cookie = $('cookieInput').value.trim();
@@ -897,6 +904,8 @@ $('btnFetch').addEventListener('click', async () => {
 
   let postId = parseWeiboId(url);
   if (!postId) return alert('无法识别帖子 ID，请检查链接格式');
+  const uid = parseWeiboUid(url);
+  const bid = /^[A-Za-z0-9]+$/.test(postId) && !/^\d+$/.test(postId) ? postId : '';
 
   // Save cookie to localStorage
   localStorage.setItem('weibo_lottery_cookie', cookie);
@@ -905,6 +914,7 @@ $('btnFetch').addEventListener('click', async () => {
   let page = 1;
   let hasMore = true;
   let numericId = null;
+  let platform = null; // 探测到的可用平台，后续页沿用，避免每页重复探测
   let errorMsg = '';
 
   $('btnFetch').disabled = true;
@@ -920,7 +930,7 @@ $('btnFetch').addEventListener('click', async () => {
       const resp = await fetch('/api/fetch-reposts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cookie, post_id: postId, page }),
+        body: JSON.stringify({ cookie, post_id: postId, page, uid, bid, platform }),
       });
 
       const data = await resp.json();
@@ -929,14 +939,13 @@ $('btnFetch').addEventListener('click', async () => {
         errorMsg = data.msg || '未知错误';
         if (data.code === 403) {
           localStorage.removeItem('weibo_lottery_cookie');
-          errorMsg = 'Cookie已过期，请重新获取';
+          errorMsg = data.msg || 'Cookie已过期，请重新获取';
         }
         break;
       }
 
-      if (data.numericId && !numericId) {
-        numericId = data.numericId;
-      }
+      if (data.numericId && !numericId) numericId = data.numericId;
+      if (data.platform && !platform) platform = data.platform; // 锁定平台
 
       data.users.forEach(u => allUsers.add(u));
 

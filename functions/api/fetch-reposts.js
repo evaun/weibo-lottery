@@ -1,6 +1,6 @@
 /**
  * Cloudflare Pages Function: 微博转发用户抓取代理
- * 解决浏览器 CORS 限制，服务端转发请求到 m.weibo.cn
+ * 同时支持 PC 版(weibo.com) 与 手机版(m.weibo.cn) 的 Cookie，自动探测可用平台
  * Cookie 仅用于本次请求，不存储、不记录
  */
 
@@ -16,7 +16,8 @@ function extractXsrf(cookie) {
   return '';
 }
 
-function makeHeaders(cookie, refererId) {
+// 手机版 m.weibo.cn 请求头
+function mobileHeaders(cookie, refererId) {
   const h = {
     'Cookie': cookie,
     'User-Agent': UA,
@@ -26,6 +27,82 @@ function makeHeaders(cookie, refererId) {
   const xsrf = extractXsrf(cookie);
   if (xsrf) h['X-XSRF-TOKEN'] = xsrf;
   return h;
+}
+
+// PC 版 weibo.com 请求头
+function pcHeaders(cookie, uid, bid) {
+  const ref = uid && bid ? `https://weibo.com/${uid}/${bid}` : 'https://weibo.com/';
+  const h = {
+    'Cookie': cookie,
+    'User-Agent': UA,
+    'Referer': ref,
+    'Accept': 'application/json, text/plain, */*',
+    'X-Requested-With': 'XMLHttpRequest',
+    'client-version': 'v2.47.42',
+  };
+  const xsrf = extractXsrf(cookie);
+  if (xsrf) h['X-XSRF-TOKEN'] = xsrf;
+  return h;
+}
+
+// 解析帖子 ID → 数字 mid（通过微博官方接口，最可靠）
+async function resolveMid(cookie, postId, uid, bid) {
+  if (/^\d+$/.test(String(postId))) return String(postId);
+  // 1) PC show 接口
+  try {
+    const r = await fetch(`https://weibo.com/ajax/statuses/show?id=${encodeURIComponent(postId)}`, { headers: pcHeaders(cookie, uid, bid) });
+    const d = await r.json();
+    if (d && (d.idstr || d.id)) return String(d.idstr || d.id);
+  } catch {}
+  // 2) 手机版 show 接口
+  try {
+    const r = await fetch(`https://m.weibo.cn/api/statuses/show?id=${encodeURIComponent(postId)}`, { headers: mobileHeaders(cookie, postId) });
+    const d = await r.json();
+    if (d && d.id) return String(d.id);
+  } catch {}
+  return null;
+}
+
+// 从一页响应里提取用户名数组
+function extractUsers(list) {
+  const users = [];
+  for (const r of (list || [])) {
+    const name = r.user?.screen_name || r.user?.name;
+    if (name) users.push(name);
+  }
+  return users;
+}
+
+// 尝试 PC 版抓取
+async function fetchPC(cookie, mid, page, uid, bid) {
+  const url = `https://weibo.com/ajax/statuses/repostTimeline?id=${mid}&page=${page}&moduleID=feed&count=20`;
+  const resp = await fetch(url, { headers: pcHeaders(cookie, uid, bid) });
+  let data;
+  try { data = await resp.json(); } catch { return { list: null, raw: null }; }
+  let list = null;
+  if (Array.isArray(data?.data)) list = data.data;
+  else if (Array.isArray(data?.data?.data)) list = data.data.data;
+  const total = data?.total_number ?? data?.data?.total_number ?? 0;
+  return { list, total, raw: data };
+}
+
+// 尝试手机版抓取
+async function fetchMobile(cookie, mid, page) {
+  const url = `https://m.weibo.cn/api/statuses/repostTimeline?id=${mid}&page=${page}`;
+  const resp = await fetch(url, { headers: mobileHeaders(cookie, mid) });
+  if (resp.status === 403) return { list: null, status: 403, raw: null };
+  let data;
+  try { data = await resp.json(); } catch { return { list: null, raw: null }; }
+  const list = Array.isArray(data?.data?.data) ? data.data.data : null;
+  const total = data?.data?.total ?? 0;
+  return { list, total, raw: data };
+}
+
+function isLoginError(raw) {
+  if (!raw) return false;
+  if (raw.ok === -100) return true;
+  const s = JSON.stringify(raw);
+  return /passport\.weibo|sso\/signin|未登录|login/i.test(s);
 }
 
 export async function onRequestOptions() {
@@ -48,7 +125,7 @@ export async function onRequestPost(context) {
 
   try {
     const body = await context.request.json();
-    const { cookie, post_id, page } = body;
+    const { cookie, post_id, page, uid, bid, platform } = body;
 
     if (!cookie || !post_id) {
       return new Response(JSON.stringify({ ok: false, msg: '缺少帖子ID或Cookie' }), { headers: corsHeaders });
@@ -56,84 +133,56 @@ export async function onRequestPost(context) {
 
     const pageNum = parseInt(page) || 1;
 
-    // 1) 短 ID → 数字 ID
-    let numericId = post_id;
-    if (!/^\d+$/.test(String(post_id))) {
-      try {
-        const showResp = await fetch(
-          `https://m.weibo.cn/api/statuses/show?id=${encodeURIComponent(post_id)}`,
-          { headers: makeHeaders(cookie, post_id) }
-        );
-        const showData = await showResp.json();
-        if (showData && showData.id) {
-          numericId = String(showData.id);
-        } else {
-          return new Response(JSON.stringify({ ok: false, msg: '短ID转换失败，请使用数字ID' }), { headers: corsHeaders });
-        }
-      } catch (e) {
-        return new Response(JSON.stringify({ ok: false, msg: '短ID转换出错：' + e.message }), { headers: corsHeaders });
+    // 1) 解析数字 mid
+    const numericId = await resolveMid(cookie, post_id, uid, bid);
+    if (!numericId) {
+      return new Response(JSON.stringify({ ok: false, msg: '无法解析帖子 ID，请检查链接或直接使用数字 ID' }), { headers: corsHeaders });
+    }
+
+    // 2) 抓取一页 —— 已知平台则只跑该平台，否则 PC→手机 自动探测
+    let result, used, lastRaw = null;
+
+    if (platform === 'pc') {
+      result = await fetchPC(cookie, numericId, pageNum, uid, bid); used = 'pc'; lastRaw = result.raw;
+    } else if (platform === 'mobile') {
+      result = await fetchMobile(cookie, numericId, pageNum); used = 'mobile'; lastRaw = result.raw;
+    } else {
+      // 自动探测：先 PC（用户多用电脑版 Cookie），失败再手机
+      result = await fetchPC(cookie, numericId, pageNum, uid, bid); used = 'pc'; lastRaw = result.raw;
+      if (!Array.isArray(result.list)) {
+        const m = await fetchMobile(cookie, numericId, pageNum);
+        lastRaw = m.raw || lastRaw;
+        if (Array.isArray(m.list)) { result = m; used = 'mobile'; }
       }
     }
 
-    // 2) 抓取一页转发
-    const url = `https://m.weibo.cn/api/statuses/repostTimeline?id=${numericId}&page=${pageNum}`;
-    const resp = await fetch(url, { headers: makeHeaders(cookie, numericId) });
-
-    if (resp.status === 403) {
-      return new Response(JSON.stringify({ ok: false, msg: 'Cookie已过期或被微博拦截，请重新获取', code: 403 }), { headers: corsHeaders });
-    }
-
-    if (!resp.ok) {
-      return new Response(JSON.stringify({ ok: false, msg: `微博返回HTTP ${resp.status}` }), { headers: corsHeaders });
-    }
-
-    let data;
-    try {
-      data = await resp.json();
-    } catch {
-      return new Response(JSON.stringify({ ok: false, msg: '微博返回了非JSON数据' }), { headers: corsHeaders });
-    }
-
-    // 3) 提取用户名
-    const reposts = data?.data?.data || [];
-
-    // 微博接口层错误（如 ok:0 / 错误码），透传给前端便于诊断
-    if (reposts.length === 0 && data && data.ok !== undefined && data.ok !== 1) {
-      // ok:-100 或跳转登录页 = Cookie 未登录/失效
-      const raw = JSON.stringify(data);
-      const isLogin = data.ok === -100 || /passport\.weibo|sso\/signin|login/i.test(raw);
-      if (isLogin) {
-        return new Response(JSON.stringify({
-          ok: false,
-          code: 403,
-          msg: 'Cookie 未登录或已失效。请确认：① Cookie 必须从手机版 m.weibo.cn 复制（不是电脑版 weibo.com）；② 复制前已在 m.weibo.cn 登录；③ Cookie 没有过期。请重新获取 Cookie 后再试。',
-        }), { headers: corsHeaders });
-      }
+    // 3) 成功
+    if (Array.isArray(result.list)) {
+      const users = extractUsers(result.list);
       return new Response(JSON.stringify({
-        ok: false,
-        msg: '微博接口返回：' + (data.msg || raw.slice(0, 120)),
-        weiboOk: data.ok,
+        ok: true,
         numericId,
+        page: pageNum,
+        platform: used,
+        users,
+        hasMore: result.list.length > 0,
+        total: result.total || 0,
       }), { headers: corsHeaders });
     }
 
-    const users = [];
-    const seen = new Set();
-    for (const r of reposts) {
-      const name = r.user?.screen_name || r.user?.name;
-      if (name && !seen.has(name)) {
-        seen.add(name);
-        users.push(name);
-      }
+    // 4) 失败：判断是否登录问题
+    if (isLoginError(lastRaw)) {
+      return new Response(JSON.stringify({
+        ok: false,
+        code: 403,
+        msg: 'Cookie 未登录或已失效。请重新登录微博（电脑版 weibo.com 或手机版 m.weibo.cn 均可），再用复制代码重新获取 Cookie。注意：复制时所在的网站，要和你登录的是同一个。',
+      }), { headers: corsHeaders });
     }
 
     return new Response(JSON.stringify({
-      ok: true,
+      ok: false,
+      msg: '未获取到转发数据。微博返回：' + (lastRaw ? JSON.stringify(lastRaw).slice(0, 150) : '空响应'),
       numericId,
-      page: pageNum,
-      users,
-      hasMore: reposts.length > 0,
-      total: data?.data?.total || 0,
     }), { headers: corsHeaders });
 
   } catch (e) {
